@@ -1,7 +1,8 @@
 import {genkit} from 'genkit';
-import {googleAI} from '@genkit-ai/googleai';
 
+// Example of configuring Genkit without any specific model providers initially.
+// You would add plugins here if you were to integrate other services or local models.
 export const ai = genkit({
-  plugins: [googleAI()],
-  model: 'googleai/gemini-2.0-flash',
+  plugins: [],
+  // model: 'some-other-model/if-needed', // No default model if we are not using any
 });
