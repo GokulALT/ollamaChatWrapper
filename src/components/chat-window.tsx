@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useRef, useEffect, FormEvent } from 'react';
@@ -8,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Send, AlertTriangle, Loader2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
+import { useToast } from "@/hooks/use-toast";
 
 interface ChatWindowProps {
   selectedModel: string | null;
@@ -18,6 +20,7 @@ export function ChatWindow({ selectedModel }: ChatWindowProps) {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const scrollAreaViewportRef = useRef<HTMLDivElement>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (scrollAreaViewportRef.current) {
@@ -35,23 +38,72 @@ export function ChatWindow({ selectedModel }: ChatWindowProps) {
       sender: 'user',
       timestamp: new Date(),
     };
-    setMessages((prevMessages) => [...prevMessages, userMessage]);
+    
+    const newMessages = [...messages, userMessage];
+    setMessages(newMessages);
     setInput('');
     setIsLoading(true);
 
-    // Simulate AI response
-    // In a real app, this would be an API call to Genkit flow interacting with Ollama
-    setTimeout(() => {
-      const aiResponse: ChatMessageData = {
-        id: Date.now().toString() + '-ai',
-        text: `This is a mock response from ${selectedModel} to your message: "${userMessage.text.substring(0, 50)}${userMessage.text.length > 50 ? '...' : ''}"`,
-        sender: 'ai',
-        timestamp: new Date(),
-        model: selectedModel,
-      };
-      setMessages((prevMessages) => [...prevMessages, aiResponse]);
+    try {
+      const response = await fetch('/api/ollama/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: selectedModel,
+          messages: newMessages.map(m => ({ sender: m.sender, text: m.text })), // Send relevant parts
+        }),
+      });
+
+      if (!response.ok || !response.body) {
+        const errorData = await response.json().catch(() => ({ error: "Unknown error occurred"}));
+        throw new Error(errorData.error || `API error: ${response.statusText}`);
+      }
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let currentAiMessageId = Date.now().toString() + '-ai';
+      
+      setMessages((prevMessages) => [
+        ...prevMessages,
+        {
+          id: currentAiMessageId,
+          text: '',
+          sender: 'ai',
+          timestamp: new Date(),
+          model: selectedModel,
+        },
+      ]);
+
+      let accumulatedResponse = '';
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        accumulatedResponse += chunk;
+        
+        setMessages((prevMessages) =>
+          prevMessages.map((msg) =>
+            msg.id === currentAiMessageId
+              ? { ...msg, text: accumulatedResponse }
+              : msg
+          )
+        );
+      }
+
+    } catch (err: any) {
+      console.error("Error sending message to Ollama:", err);
+      toast({
+        variant: "destructive",
+        title: "Chat Error",
+        description: err.message || "Failed to get response from the AI.",
+      });
+      // Optionally remove the pending AI message or mark it as error
+       setMessages((prevMessages) => prevMessages.filter(msg => msg.id !== userMessage.id + "-pending-ai"));
+    } finally {
       setIsLoading(false);
-    }, 1500 + Math.random() * 1000); // Add some randomness to simulate network
+    }
   };
 
   return (
@@ -61,7 +113,7 @@ export function ChatWindow({ selectedModel }: ChatWindowProps) {
           {messages.map((msg) => (
             <ChatMessage key={msg.id} message={msg} />
           ))}
-          {isLoading && (
+          {isLoading && messages[messages.length -1]?.sender === 'user' && ( // Show loader only if last message is user and we are waiting
             <div className="flex items-start gap-3 justify-start">
                <Card className="max-w-xs sm:max-w-md md:max-w-lg rounded-xl shadow-sm bg-card text-card-foreground">
                 <CardContent className="p-3">
