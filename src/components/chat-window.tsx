@@ -4,7 +4,7 @@
 import React, { useState, useRef, useEffect, FormEvent } from 'react';
 import type { ChatMessageData } from '@/types/chat';
 import { ChatMessage } from '@/components/chat-message';
-import { Textarea } from '@/components/ui/textarea'; // Changed from Input
+import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Send, AlertTriangle, Loader2 } from 'lucide-react';
@@ -142,11 +142,17 @@ export function ChatWindow({ selectedModel, newChatKey }: ChatWindowProps) {
   };
 
   const handleTextareaKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key === 'Enter' && !event.shiftKey) {
-      event.preventDefault();
-      sendMessage();
+    if (event.key === 'Enter') {
+      if (event.shiftKey) {
+        // Shift+Enter: Allow default behavior (insert newline)
+        // We do nothing here, so the default action of inserting a newline proceeds.
+        return;
+      } else {
+        // Enter alone: Prevent default (newline/form submission) and send message
+        event.preventDefault();
+        sendMessage();
+      }
     }
-    // Shift+Enter will insert a newline by default
   };
 
   return (
@@ -175,15 +181,15 @@ export function ChatWindow({ selectedModel, newChatKey }: ChatWindowProps) {
         {selectedModel ? (
           <form
             onSubmit={handleFormSubmit}
-            className="flex items-end gap-2" // items-end for button alignment with growing textarea
+            className="flex items-end gap-2" 
           >
               <Textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
                 onKeyDown={handleTextareaKeyDown}
                 placeholder="Type your message (Shift+Enter for new line)..."
-                className="flex-grow resize-none min-h-[40px] max-h-[200px] py-2 px-3" // Adjusted styling
-                rows={1} // Start with one row
+                className="flex-grow resize-none min-h-[40px] max-h-[200px] py-2 px-3" 
+                rows={1} 
                 disabled={isLoading}
                 aria-label="Chat input"
               />
