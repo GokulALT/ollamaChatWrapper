@@ -4,7 +4,7 @@
 import React, { useState, useRef, useEffect, FormEvent } from 'react';
 import type { ChatMessageData } from '@/types/chat';
 import { ChatMessage } from '@/components/chat-message';
-import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea'; // Changed from Input
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Send, AlertTriangle, Loader2 } from 'lucide-react';
@@ -13,7 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 
 interface ChatWindowProps {
   selectedModel: string | null;
-  newChatKey: number; // Added to trigger chat reset
+  newChatKey: number;
 }
 
 export function ChatWindow({ selectedModel, newChatKey }: ChatWindowProps) {
@@ -37,7 +37,6 @@ export function ChatWindow({ selectedModel, newChatKey }: ChatWindowProps) {
       return;
     }
 
-    // Abort any ongoing fetch request
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
       abortControllerRef.current = null;
@@ -48,9 +47,8 @@ export function ChatWindow({ selectedModel, newChatKey }: ChatWindowProps) {
     setIsLoading(false);
   }, [newChatKey]);
 
-  const handleSendMessage = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!input.trim() || !selectedModel) return;
+  const sendMessage = async () => {
+    if (!input.trim() || !selectedModel || isLoading) return;
 
     const userMessage: ChatMessageData = {
       id: Date.now().toString() + '-user',
@@ -64,7 +62,6 @@ export function ChatWindow({ selectedModel, newChatKey }: ChatWindowProps) {
     setInput('');
     setIsLoading(true);
 
-    // Abort previous request if any
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
@@ -122,7 +119,6 @@ export function ChatWindow({ selectedModel, newChatKey }: ChatWindowProps) {
 
     } catch (err: any) {
       if (err.name === 'AbortError') {
-        // Fetch was aborted, likely due to new chat or component unmount
         console.log('Fetch aborted.');
       } else {
         console.error("Error sending message to Ollama:", err);
@@ -134,10 +130,23 @@ export function ChatWindow({ selectedModel, newChatKey }: ChatWindowProps) {
       }
     } finally {
       setIsLoading(false);
-      if (abortControllerRef.current === controller) { // Ensure we only clear the current controller
+      if (abortControllerRef.current === controller) {
         abortControllerRef.current = null;
       }
     }
+  };
+
+  const handleFormSubmit = (e: FormEvent) => {
+    e.preventDefault();
+    sendMessage();
+  };
+
+  const handleTextareaKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key === 'Enter' && !event.shiftKey) {
+      event.preventDefault();
+      sendMessage();
+    }
+    // Shift+Enter will insert a newline by default
   };
 
   return (
@@ -165,15 +174,16 @@ export function ChatWindow({ selectedModel, newChatKey }: ChatWindowProps) {
       <div className="p-4 border-t bg-background">
         {selectedModel ? (
           <form
-            onSubmit={handleSendMessage}
-            className="flex items-center gap-2"
+            onSubmit={handleFormSubmit}
+            className="flex items-end gap-2" // items-end for button alignment with growing textarea
           >
-              <Input
-                type="text"
+              <Textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Type your message..."
-                className="flex-grow"
+                onKeyDown={handleTextareaKeyDown}
+                placeholder="Type your message (Shift+Enter for new line)..."
+                className="flex-grow resize-none min-h-[40px] max-h-[200px] py-2 px-3" // Adjusted styling
+                rows={1} // Start with one row
                 disabled={isLoading}
                 aria-label="Chat input"
               />
