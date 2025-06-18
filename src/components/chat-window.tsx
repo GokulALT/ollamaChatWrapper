@@ -13,20 +13,40 @@ import { useToast } from "@/hooks/use-toast";
 
 interface ChatWindowProps {
   selectedModel: string | null;
+  newChatKey: number; // Added to trigger chat reset
 }
 
-export function ChatWindow({ selectedModel }: ChatWindowProps) {
+export function ChatWindow({ selectedModel, newChatKey }: ChatWindowProps) {
   const [messages, setMessages] = useState<ChatMessageData[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const scrollAreaViewportRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const initialRenderRef = useRef(true);
 
   useEffect(() => {
     if (scrollAreaViewportRef.current) {
       scrollAreaViewportRef.current.scrollTop = scrollAreaViewportRef.current.scrollHeight;
     }
   }, [messages, isLoading]);
+
+  useEffect(() => {
+    if (initialRenderRef.current) {
+      initialRenderRef.current = false;
+      return;
+    }
+
+    // Abort any ongoing fetch request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+
+    setMessages([]);
+    setInput('');
+    setIsLoading(false);
+  }, [newChatKey]);
 
   const handleSendMessage = async (e: FormEvent) => {
     e.preventDefault();
@@ -44,6 +64,13 @@ export function ChatWindow({ selectedModel }: ChatWindowProps) {
     setInput('');
     setIsLoading(true);
 
+    // Abort previous request if any
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
     try {
       const response = await fetch('/api/ollama/chat', {
         method: 'POST',
@@ -52,8 +79,9 @@ export function ChatWindow({ selectedModel }: ChatWindowProps) {
         },
         body: JSON.stringify({
           model: selectedModel,
-          messages: newMessages.map(m => ({ sender: m.sender, text: m.text })), // Send relevant parts
+          messages: newMessages.map(m => ({ sender: m.sender, text: m.text })), 
         }),
+        signal: controller.signal,
       });
 
       if (!response.ok || !response.body) {
@@ -93,16 +121,22 @@ export function ChatWindow({ selectedModel }: ChatWindowProps) {
       }
 
     } catch (err: any) {
-      console.error("Error sending message to Ollama:", err);
-      toast({
-        variant: "destructive",
-        title: "Chat Error",
-        description: err.message || "Failed to get response from the AI.",
-      });
-      // Optionally remove the pending AI message or mark it as error
-       setMessages((prevMessages) => prevMessages.filter(msg => msg.id !== userMessage.id + "-pending-ai"));
+      if (err.name === 'AbortError') {
+        // Fetch was aborted, likely due to new chat or component unmount
+        console.log('Fetch aborted.');
+      } else {
+        console.error("Error sending message to Ollama:", err);
+        toast({
+          variant: "destructive",
+          title: "Chat Error",
+          description: err.message || "Failed to get response from the AI.",
+        });
+      }
     } finally {
       setIsLoading(false);
+      if (abortControllerRef.current === controller) { // Ensure we only clear the current controller
+        abortControllerRef.current = null;
+      }
     }
   };
 
@@ -113,7 +147,7 @@ export function ChatWindow({ selectedModel }: ChatWindowProps) {
           {messages.map((msg) => (
             <ChatMessage key={msg.id} message={msg} />
           ))}
-          {isLoading && messages[messages.length -1]?.sender === 'user' && ( // Show loader only if last message is user and we are waiting
+          {isLoading && messages[messages.length -1]?.sender === 'user' && ( 
             <div className="flex items-start gap-3 justify-start">
                <Card className="max-w-xs sm:max-w-md md:max-w-lg rounded-xl shadow-sm bg-card text-card-foreground">
                 <CardContent className="p-3">

@@ -16,10 +16,15 @@ import {
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { Settings2, MessageSquare } from 'lucide-react';
+import { Settings2, MessageSquare, FilePlus2 } from 'lucide-react';
 
 export default function Home() {
   const [selectedModel, setSelectedModel] = useState<string | null>('llama3-8b'); // Default model selected
+  const [newChatKey, setNewChatKey] = useState<number>(Date.now());
+
+  const handleNewChat = () => {
+    setNewChatKey(Date.now());
+  };
 
   return (
     <SidebarProvider defaultOpen={true} >
@@ -30,8 +35,22 @@ export default function Home() {
             <h2 className="text-xl font-semibold font-headline text-foreground group-data-[collapsible=icon]:hidden">OllamaChat</h2>
           </div>
         </SidebarHeader>
-        <SidebarContent className="p-0">
-          <ModelSelector selectedModel={selectedModel} onSelectModel={setSelectedModel} />
+        <SidebarContent className="p-0 flex flex-col">
+          <div className="p-2 group-data-[collapsible=icon]:p-1">
+            <Button
+              variant="outline"
+              className="w-full justify-start group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:size-10 group-data-[collapsible=icon]:p-0"
+              onClick={handleNewChat}
+              title="New Chat"
+              aria-label="Start a new chat session"
+            >
+              <FilePlus2 size={18} className="group-data-[collapsible=icon]:m-0 mr-2" />
+              <span className="group-data-[collapsible=icon]:hidden">New Chat</span>
+            </Button>
+          </div>
+          <div className="flex-grow overflow-y-auto">
+            <ModelSelector selectedModel={selectedModel} onSelectModel={setSelectedModel} />
+          </div>
         </SidebarContent>
         <SidebarFooter className="p-0 mt-auto">
           <Separator className="my-0 bg-sidebar-border group-data-[collapsible=icon]:hidden" />
@@ -54,7 +73,7 @@ export default function Home() {
         </header>
         
         <main className="flex-1 overflow-hidden h-[calc(100vh-57px)]">
-          <ChatWindow selectedModel={selectedModel} />
+          <ChatWindow selectedModel={selectedModel} newChatKey={newChatKey} />
         </main>
       </SidebarInset>
     </SidebarProvider>
