@@ -3,8 +3,8 @@ import './globals.css';
 import { Toaster } from "@/components/ui/toaster";
 
 export const metadata: Metadata = {
-  title: 'Ollama Chat Studio',
-  description: 'Chat with Ollama models using a friendly interface',
+  title: 'Chat Studio',
+  description: 'Chat with local LLMs using a friendly interface',
 };
 
 export default function RootLayout({

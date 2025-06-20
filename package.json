@@ -1,5 +1,5 @@
 {
-  "name": "ollama-chat-studio",
+  "name": "chat-studio",
   "version": "0.1.0",
   "private": true,
   "scripts": {
