@@ -32,7 +32,7 @@ export default function Home() {
         <SidebarHeader className="p-3 group-data-[collapsible=icon]:p-2 group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:justify-center">
           <div className="flex items-center gap-2">
             <MessageSquare className="h-7 w-7 text-primary" />
-            <h2 className="text-xl font-semibold font-headline text-foreground group-data-[collapsible=icon]:hidden">OllamaChat</h2>
+            <h2 className="text-xl font-semibold font-headline text-foreground group-data-[collapsible=icon]:hidden">Ollama Chat Studio</h2>
           </div>
         </SidebarHeader>
         <SidebarContent className="p-0 flex flex-col">

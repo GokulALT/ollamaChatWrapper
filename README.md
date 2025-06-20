@@ -1,4 +1,4 @@
-# OllamaChat - Chat with Local LLMs
+# Ollama Chat Studio - Chat with Local LLMs
 
 This is a Next.js application built with Firebase Studio that allows you to chat with large language models (LLMs) hosted by a local Ollama server. It features a clean user interface built with ShadCN UI components and Tailwind CSS.
 
@@ -10,6 +10,7 @@ This is a Next.js application built with Firebase Studio that allows you to chat
 *   **Ollama Server Status**: Displays the connectivity status to your local Ollama server, along with (simulated) CPU and RAM usage.
 *   **Multi-line Input**: Supports multi-line message input with Shift+Enter for newlines.
 *   **Responsive Design**: Adapts to different screen sizes.
+*   **Markdown Rendering**: Chat messages can render Markdown for richer text formatting.
 
 ## Prerequisites
 
@@ -43,7 +44,7 @@ This is a Next.js application built with Firebase Studio that allows you to chat
     ```
     The application will typically be available at `http://localhost:9002` (as per your `package.json` dev script).
 
-5.  **Open your browser** and navigate to the application URL. You should see the OllamaChat interface. If your Ollama server is running and accessible, you'll be able to select a model and start chatting.
+5.  **Open your browser** and navigate to the application URL. You should see the Ollama Chat Studio interface. If your Ollama server is running and accessible, you'll be able to select a model and start chatting.
 
 ## Project Structure
 
@@ -68,5 +69,6 @@ This is a Next.js application built with Firebase Studio that allows you to chat
 *   **Styling**: [Tailwind CSS](https://tailwindcss.com/)
 *   **Language**: [TypeScript](https://www.typescriptlang.org/)
 *   **Icons**: [Lucide React](https://lucide.dev/)
+*   **Markdown**: [React Markdown](https://github.com/remarkjs/react-markdown)
 
 This project was initialized and developed with the assistance of Firebase Studio.
