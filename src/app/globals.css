@@ -46,7 +46,6 @@ body {
   }
 
   .dark {
-    /* Keeping dark theme for completeness, but focusing on light theme as per prompt */
     --background: 240 10% 3.9%;
     --foreground: 0 0% 98%;
     --card: 240 10% 3.9%;

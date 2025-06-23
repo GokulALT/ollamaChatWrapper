@@ -16,7 +16,8 @@ import {
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { Settings2, MessageSquare, FilePlus2 } from 'lucide-react';
+import { MessageSquare, FilePlus2 } from 'lucide-react';
+import { ThemeToggle } from '@/components/theme-toggle';
 
 export default function Home() {
   const [selectedModel, setSelectedModel] = useState<string | null>('llama3-8b'); // Default model selected
@@ -67,9 +68,7 @@ export default function Home() {
                 {selectedModel ? `${selectedModel}` : 'Select a Model'}
             </h1>
            </div>
-          <Button variant="ghost" size="icon" aria-label="Settings">
-            <Settings2 className="h-5 w-5 text-muted-foreground" />
-          </Button>
+          <ThemeToggle />
         </header>
         
         <main className="flex-1 overflow-hidden h-[calc(100vh-57px)]">
