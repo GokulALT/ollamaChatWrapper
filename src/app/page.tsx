@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ChatWindow } from '@/components/chat-window';
 import { ModelSelector } from '@/components/model-selector';
 import { OllamaStatus } from '@/components/ollama-status';
@@ -16,15 +16,34 @@ import {
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { MessageSquare, FilePlus2 } from 'lucide-react';
+import { MessageSquare, FilePlus2, Settings } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { SettingsDialog } from '@/components/settings-dialog';
 
 export default function Home() {
-  const [selectedModel, setSelectedModel] = useState<string | null>('llama3-8b'); // Default model selected
+  const [selectedModel, setSelectedModel] = useState<string | null>('llama3-8b');
   const [newChatKey, setNewChatKey] = useState<number>(Date.now());
+  const [systemPrompt, setSystemPrompt] = useState<string | null>(null);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [modelRefreshKey, setModelRefreshKey] = useState<number>(Date.now());
+
+  useEffect(() => {
+    try {
+      const storedPrompt = localStorage.getItem('system_prompt');
+      if (storedPrompt) {
+        setSystemPrompt(storedPrompt);
+      }
+    } catch (error) {
+      console.warn("Could not access localStorage to get system prompt.");
+    }
+  }, []);
 
   const handleNewChat = () => {
     setNewChatKey(Date.now());
+  };
+
+  const handleRefreshModels = () => {
+    setModelRefreshKey(Date.now());
   };
 
   return (
@@ -50,7 +69,7 @@ export default function Home() {
             </Button>
           </div>
           <div className="flex-grow overflow-y-auto">
-            <ModelSelector selectedModel={selectedModel} onSelectModel={setSelectedModel} />
+            <ModelSelector selectedModel={selectedModel} onSelectModel={setSelectedModel} refreshKey={modelRefreshKey} />
           </div>
         </SidebarContent>
         <SidebarFooter className="p-0 mt-auto">
@@ -63,18 +82,32 @@ export default function Home() {
       <SidebarInset>
         <header className="flex items-center justify-between p-3 border-b bg-background sticky top-0 z-10 h-[57px]">
            <div className="flex items-center gap-2">
-            <SidebarTrigger className="md:hidden -ml-2" /> {/* Show only on mobile if sidebar is collapsible icon type for desktop */}
+            <SidebarTrigger className="md:hidden -ml-2" /> 
             <h1 className="text-lg font-semibold font-headline text-foreground truncate pl-1 md:pl-0">
                 {selectedModel ? `${selectedModel}` : 'Select a Model'}
             </h1>
            </div>
-          <ThemeToggle />
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="icon" onClick={() => setIsSettingsOpen(true)} title="Settings">
+              <Settings size={18} />
+              <span className="sr-only">Settings</span>
+            </Button>
+            <ThemeToggle />
+          </div>
         </header>
         
         <main className="flex-1 overflow-hidden h-[calc(100vh-57px)]">
-          <ChatWindow selectedModel={selectedModel} newChatKey={newChatKey} />
+          <ChatWindow selectedModel={selectedModel} newChatKey={newChatKey} systemPrompt={systemPrompt} />
         </main>
       </SidebarInset>
+
+      <SettingsDialog
+        isOpen={isSettingsOpen}
+        onOpenChange={setIsSettingsOpen}
+        systemPrompt={systemPrompt}
+        onSystemPromptChange={setSystemPrompt}
+        onModelsUpdate={handleRefreshModels}
+      />
     </SidebarProvider>
   );
 }

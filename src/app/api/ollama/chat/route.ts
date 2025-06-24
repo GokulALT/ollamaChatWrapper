@@ -13,9 +13,13 @@ async function* OllamaResponseTransformer(stream: ReadableStream<Uint8Array>): A
       const { done, value } = await reader.read();
       if (done) {
         if (buffer.trim()) {
-          const jsonChunk = JSON.parse(buffer);
-          if (jsonChunk.message && jsonChunk.message.content) {
-            yield jsonChunk.message.content;
+          try {
+            const jsonChunk = JSON.parse(buffer);
+            if (jsonChunk.message && jsonChunk.message.content) {
+              yield jsonChunk.message.content;
+            }
+          } catch (e) {
+            console.error("Failed to parse final JSON chunk:", buffer);
           }
         }
         break;
@@ -26,12 +30,16 @@ async function* OllamaResponseTransformer(stream: ReadableStream<Uint8Array>): A
 
       for (const line of lines) {
         if (line.trim()) {
-          const jsonChunk = JSON.parse(line);
-          if (jsonChunk.message && jsonChunk.message.content) {
-            yield jsonChunk.message.content;
-          }
-          if (jsonChunk.done) { // Check for done flag within a line
-            return; // End generation if Ollama signals done
+          try {
+            const jsonChunk = JSON.parse(line);
+            if (jsonChunk.message && jsonChunk.message.content) {
+              yield jsonChunk.message.content;
+            }
+            if (jsonChunk.done) { // Check for done flag within a line
+              return; // End generation if Ollama signals done
+            }
+          } catch(e) {
+            console.error("Failed to parse JSON chunk:", line);
           }
         }
       }
@@ -50,7 +58,7 @@ async function* OllamaResponseTransformer(stream: ReadableStream<Uint8Array>): A
 export async function POST(req: NextRequest) {
   const ollamaBaseUrl = process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
   try {
-    const { model, messages } = (await req.json()) as { model: string; messages: ChatMessageData[] };
+    const { model, messages, system } = (await req.json()) as { model: string; messages: ChatMessageData[]; system?: string };
 
     if (!model || !messages) {
       return new Response(JSON.stringify({ error: 'Missing model or messages in request body' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
@@ -62,16 +70,22 @@ export async function POST(req: NextRequest) {
       content: msg.text,
     }));
 
+    const requestBody: any = {
+      model: model,
+      messages: ollamaMessages,
+      stream: true,
+    };
+
+    if (system && system.trim()) {
+      requestBody.system = system;
+    }
+
     const ollamaResponse = await fetch(`${ollamaBaseUrl}/api/chat`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        model: model,
-        messages: ollamaMessages,
-        stream: true,
-      }),
+      body: JSON.stringify(requestBody),
     });
 
     if (!ollamaResponse.ok || !ollamaResponse.body) {

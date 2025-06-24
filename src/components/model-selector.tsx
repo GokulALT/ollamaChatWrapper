@@ -21,9 +21,10 @@ interface Model {
 interface ModelSelectorProps {
   selectedModel: string | null;
   onSelectModel: (modelId: string) => void;
+  refreshKey?: number;
 }
 
-export function ModelSelector({ selectedModel, onSelectModel }: ModelSelectorProps) {
+export function ModelSelector({ selectedModel, onSelectModel, refreshKey }: ModelSelectorProps) {
   const [availableModels, setAvailableModels] = useState<Model[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -40,6 +41,9 @@ export function ModelSelector({ selectedModel, onSelectModel }: ModelSelectorPro
         }
         const modelsData = await response.json();
         setAvailableModels(modelsData);
+        if (!selectedModel && modelsData.length > 0) {
+          onSelectModel(modelsData[0].id);
+        }
       } catch (err: any) {
         console.error("Error fetching models:", err);
         setError(err.message || 'Could not load models from Ollama.');
@@ -50,7 +54,7 @@ export function ModelSelector({ selectedModel, onSelectModel }: ModelSelectorPro
     };
 
     fetchModels();
-  }, []);
+  }, [refreshKey]);
 
   return (
     <SidebarGroup className="group-data-[collapsible=icon]:py-0">

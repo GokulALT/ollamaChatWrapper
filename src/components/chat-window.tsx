@@ -14,9 +14,10 @@ import { useToast } from "@/hooks/use-toast";
 interface ChatWindowProps {
   selectedModel: string | null;
   newChatKey: number;
+  systemPrompt: string | null;
 }
 
-export function ChatWindow({ selectedModel, newChatKey }: ChatWindowProps) {
+export function ChatWindow({ selectedModel, newChatKey, systemPrompt }: ChatWindowProps) {
   const [messages, setMessages] = useState<ChatMessageData[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -77,6 +78,7 @@ export function ChatWindow({ selectedModel, newChatKey }: ChatWindowProps) {
         body: JSON.stringify({
           model: selectedModel,
           messages: newMessages.map(m => ({ sender: m.sender, text: m.text })), 
+          system: systemPrompt,
         }),
         signal: controller.signal,
       });
@@ -127,6 +129,8 @@ export function ChatWindow({ selectedModel, newChatKey }: ChatWindowProps) {
           title: "Chat Error",
           description: err.message || "Failed to get response from the AI.",
         });
+        // Remove the empty AI message bubble on error
+        setMessages(prev => prev.filter(m => m.id !== (Date.now().toString() + '-ai') && m.text.length > 0));
       }
     } finally {
       setIsLoading(false);
@@ -144,11 +148,8 @@ export function ChatWindow({ selectedModel, newChatKey }: ChatWindowProps) {
   const handleTextareaKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === 'Enter') {
       if (event.shiftKey) {
-        // Shift+Enter: Allow default behavior (insert newline)
-        // We do nothing here, so the default action of inserting a newline proceeds.
         return;
       } else {
-        // Enter alone: Prevent default (newline/form submission) and send message
         event.preventDefault();
         sendMessage();
       }
@@ -159,6 +160,17 @@ export function ChatWindow({ selectedModel, newChatKey }: ChatWindowProps) {
     <div className="flex flex-col h-full max-h-full bg-background">
       <ScrollArea className="flex-grow" viewportRef={scrollAreaViewportRef}>
         <div className="p-4 space-y-4">
+          {messages.length === 0 && (
+            <div className="text-center text-muted-foreground pt-10">
+              <MessageSquare size={40} className="mx-auto" />
+              <p className="mt-2">Start a conversation by typing below.</p>
+              {systemPrompt && (
+                <p className="text-xs mt-4 italic max-w-md mx-auto">
+                  System Prompt Active: "{systemPrompt.length > 100 ? `${systemPrompt.substring(0, 100)}...` : systemPrompt}"
+                </p>
+              )}
+            </div>
+          )}
           {messages.map((msg) => (
             <ChatMessage key={msg.id} message={msg} />
           ))}
