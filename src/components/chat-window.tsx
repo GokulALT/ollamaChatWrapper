@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useRef, useEffect, FormEvent } from 'react';
@@ -7,7 +6,7 @@ import { ChatMessage } from '@/components/chat-message';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Send, AlertTriangle, Loader2 } from 'lucide-react';
+import { Send, AlertTriangle, Loader2, MessageSquare } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from "@/hooks/use-toast";
 
