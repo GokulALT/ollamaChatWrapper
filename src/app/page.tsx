@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -20,12 +21,15 @@ import { MessageSquare, FilePlus2, Settings } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { SettingsDialog } from '@/components/settings-dialog';
 
+export type ConnectionMode = 'mcp' | 'direct';
+
 export default function Home() {
-  const [selectedModel, setSelectedModel] = useState<string | null>('llama3-8b');
+  const [selectedModel, setSelectedModel] = useState<string | null>(null);
   const [newChatKey, setNewChatKey] = useState<number>(Date.now());
   const [systemPrompt, setSystemPrompt] = useState<string | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [modelRefreshKey, setModelRefreshKey] = useState<number>(Date.now());
+  const [connectionMode, setConnectionMode] = useState<ConnectionMode>('mcp');
 
   useEffect(() => {
     try {
@@ -33,17 +37,37 @@ export default function Home() {
       if (storedPrompt) {
         setSystemPrompt(storedPrompt);
       }
+      const storedMode = localStorage.getItem('connection_mode') as ConnectionMode | null;
+      if (storedMode) {
+        setConnectionMode(storedMode);
+      } else {
+        // Default to direct if nothing is stored, as it's the simpler setup.
+        setConnectionMode('direct');
+      }
     } catch (error) {
-      console.warn("Could not access localStorage to get system prompt.");
+      console.warn("Could not access localStorage.");
     }
   }, []);
-
+  
   const handleNewChat = () => {
     setNewChatKey(Date.now());
   };
 
   const handleRefreshModels = () => {
     setModelRefreshKey(Date.now());
+  };
+
+  const handleConnectionModeChange = (mode: ConnectionMode) => {
+    setConnectionMode(mode);
+    try {
+      localStorage.setItem('connection_mode', mode);
+    } catch (error) {
+      console.warn("Could not access localStorage to set connection mode.");
+    }
+    // Reset selection and refresh models when mode changes
+    setSelectedModel(null);
+    handleRefreshModels();
+    handleNewChat();
   };
 
   return (
@@ -69,12 +93,12 @@ export default function Home() {
             </Button>
           </div>
           <div className="flex-grow overflow-y-auto">
-            <ModelSelector selectedModel={selectedModel} onSelectModel={setSelectedModel} refreshKey={modelRefreshKey} />
+            <ModelSelector selectedModel={selectedModel} onSelectModel={setSelectedModel} refreshKey={modelRefreshKey} connectionMode={connectionMode} />
           </div>
         </SidebarContent>
         <SidebarFooter className="p-0 mt-auto">
           <Separator className="my-0 bg-sidebar-border group-data-[collapsible=icon]:hidden" />
-          <OllamaStatus />
+          <OllamaStatus connectionMode={connectionMode} />
         </SidebarFooter>
         <SidebarRail />
       </Sidebar>
@@ -97,7 +121,7 @@ export default function Home() {
         </header>
         
         <main className="flex-1 overflow-hidden h-[calc(100vh-57px)]">
-          <ChatWindow selectedModel={selectedModel} newChatKey={newChatKey} systemPrompt={systemPrompt} />
+          <ChatWindow selectedModel={selectedModel} newChatKey={newChatKey} systemPrompt={systemPrompt} connectionMode={connectionMode} />
         </main>
       </SidebarInset>
 
@@ -107,6 +131,8 @@ export default function Home() {
         systemPrompt={systemPrompt}
         onSystemPromptChange={setSystemPrompt}
         onModelsUpdate={handleRefreshModels}
+        connectionMode={connectionMode}
+        onConnectionModeChange={handleConnectionModeChange}
       />
     </SidebarProvider>
   );

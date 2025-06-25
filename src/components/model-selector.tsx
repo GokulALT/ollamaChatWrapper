@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/sidebar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Cpu, AlertTriangle, Wrench } from 'lucide-react';
+import type { ConnectionMode } from '@/app/page';
 
 interface Model {
   id: string;
@@ -20,11 +21,12 @@ interface Model {
 
 interface ModelSelectorProps {
   selectedModel: string | null;
-  onSelectModel: (modelId: string) => void;
+  onSelectModel: (modelId: string | null) => void;
   refreshKey?: number;
+  connectionMode: ConnectionMode;
 }
 
-export function ModelSelector({ selectedModel, onSelectModel, refreshKey }: ModelSelectorProps) {
+export function ModelSelector({ selectedModel, onSelectModel, refreshKey, connectionMode }: ModelSelectorProps) {
   const [models, setModels] = useState<Model[]>([]);
   const [tools, setTools] = useState<Model[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -35,25 +37,40 @@ export function ModelSelector({ selectedModel, onSelectModel, refreshKey }: Mode
       setIsLoading(true);
       setError(null);
       try {
-        const response = await fetch('/api/ollama/models');
+        const response = await fetch(`/api/ollama/models?mode=${connectionMode}`);
         if (!response.ok) {
-          const errorData = await response.json();
+          const errorData = await response.json().catch(() => ({}));
           throw new Error(errorData.error || `Failed to fetch: ${response.statusText}`);
         }
         const allItems: Model[] = await response.json();
         
-        const availableModels = allItems.filter(item => !item.id.startsWith('tool/'));
-        const availableTools = allItems.filter(item => item.id.startsWith('tool/'));
+        let availableModels: Model[];
+        let availableTools: Model[] = [];
+
+        if (connectionMode === 'mcp') {
+            availableModels = allItems.filter(item => !item.id.startsWith('tool/'));
+            availableTools = allItems.filter(item => item.id.startsWith('tool/'));
+        } else {
+            availableModels = allItems;
+        }
 
         setModels(availableModels);
         setTools(availableTools);
 
+        // Auto-select the first model if none is selected and models are available
         if (!selectedModel && availableModels.length > 0) {
           onSelectModel(availableModels[0].id);
+        } else if (availableModels.length > 0 && selectedModel && !availableModels.some(m => m.id === selectedModel)) {
+          // If the selected model is not in the new list, select the first one
+          onSelectModel(availableModels[0].id);
+        } else if (availableModels.length === 0) {
+          // No models available, so deselect any current model
+          onSelectModel(null);
         }
+
       } catch (err: any) {
         console.error("Error fetching models/tools:", err);
-        setError(err.message || 'Could not load models from MCP.');
+        setError(err.message || `Could not load models from ${connectionMode.toUpperCase()}.`);
         setModels([]);
         setTools([]);
       } finally {
@@ -62,7 +79,8 @@ export function ModelSelector({ selectedModel, onSelectModel, refreshKey }: Mode
     };
 
     fetchItems();
-  }, [refreshKey, onSelectModel, selectedModel]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshKey, connectionMode]);
 
   return (
     <>
@@ -112,7 +130,7 @@ export function ModelSelector({ selectedModel, onSelectModel, refreshKey }: Mode
         </SidebarGroupContent>
       </SidebarGroup>
 
-      {tools.length > 0 && (
+      {connectionMode === 'mcp' && tools.length > 0 && (
         <SidebarGroup className="group-data-[collapsible=icon]:py-0">
           <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden">Available Tools</SidebarGroupLabel>
           <SidebarGroupContent>

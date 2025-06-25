@@ -5,31 +5,37 @@ import React, { useState, useEffect } from 'react';
 import { Activity, CheckCircle2, WifiOff, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import type { ConnectionMode } from '@/app/page';
 
-interface MCPStatusState {
+interface StatusState {
   online: boolean | null; // null for initial loading state
   message: string;
 }
 
-export function OllamaStatus() {
-  const [status, setStatus] = useState<MCPStatusState>({
+interface OllamaStatusProps {
+    connectionMode: ConnectionMode;
+}
+
+export function OllamaStatus({ connectionMode }: OllamaStatusProps) {
+  const [status, setStatus] = useState<StatusState>({
     online: null,
     message: 'Checking status...',
   });
   const [isLoading, setIsLoading] = useState(true);
+  const serverName = connectionMode.toUpperCase();
 
   useEffect(() => {
     const fetchStatus = async () => {
       setIsLoading(true);
       try {
-        const response = await fetch('/api/ollama/status');
+        const response = await fetch(`/api/ollama/status?mode=${connectionMode}`);
         const data = await response.json();
         setStatus({
           online: data.online,
           message: data.message,
         });
       } catch (error) {
-        console.error("Error fetching MCP status:", error);
+        console.error(`Error fetching ${serverName} status:`, error);
         setStatus({
           online: false,
           message: 'Failed to fetch status from API.',
@@ -43,13 +49,13 @@ export function OllamaStatus() {
     const intervalId = setInterval(fetchStatus, 30000); // Check status every 30 seconds
 
     return () => clearInterval(intervalId);
-  }, []);
+  }, [connectionMode, serverName]);
 
   return (
     <div className="p-2 space-y-1 text-sm group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:items-center">
       <div className="flex items-center gap-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:w-full group-data-[collapsible=icon]:p-2">
         <Activity size={18} className="text-sidebar-foreground" />
-        <h3 className="font-medium text-sidebar-foreground group-data-[collapsible=icon]:hidden">MCP Status</h3>
+        <h3 className="font-medium text-sidebar-foreground group-data-[collapsible=icon]:hidden">{serverName} Status</h3>
       </div>
       
       <div className="pl-1 text-xs text-sidebar-foreground/80 group-data-[collapsible=icon]:hidden">
@@ -70,7 +76,7 @@ export function OllamaStatus() {
                 </Badge>
               )}
             </div>
-            <p className={cn("mt-1 text-[0.7rem]", { 'text-red-600 dark:text-red-400': !status.online })}>
+            <p className={cn("mt-1 text-[0.7rem] break-words w-[170px]", { 'text-red-600 dark:text-red-400': !status.online })}>
               {status.message}
             </p>
           </>

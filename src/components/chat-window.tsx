@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useRef, useEffect, FormEvent } from 'react';
@@ -9,14 +10,16 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Send, AlertTriangle, Loader2, MessageSquare } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from "@/hooks/use-toast";
+import type { ConnectionMode } from '@/app/page';
 
 interface ChatWindowProps {
   selectedModel: string | null;
   newChatKey: number;
   systemPrompt: string | null;
+  connectionMode: ConnectionMode;
 }
 
-export function ChatWindow({ selectedModel, newChatKey, systemPrompt }: ChatWindowProps) {
+export function ChatWindow({ selectedModel, newChatKey, systemPrompt, connectionMode }: ChatWindowProps) {
   const [messages, setMessages] = useState<ChatMessageData[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -78,6 +81,7 @@ export function ChatWindow({ selectedModel, newChatKey, systemPrompt }: ChatWind
           model: selectedModel,
           messages: newMessages.map(m => ({ sender: m.sender, text: m.text })), 
           system: systemPrompt,
+          connectionMode: connectionMode,
         }),
         signal: controller.signal,
       });

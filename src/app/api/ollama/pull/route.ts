@@ -1,10 +1,52 @@
-import { NextResponse } from 'next/server';
+
+import { type NextRequest } from 'next/server';
 
 export const runtime = 'edge';
 
-export async function POST() {
-  return NextResponse.json(
-    { error: 'Model management is not supported via the UI when using MCP.', details: 'Please manage your models in the MCP server configuration file.' },
-    { status: 400 }
-  );
+export async function POST(req: NextRequest) {
+  const ollamaBaseUrl = process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
+  try {
+    const body = await req.json();
+    const modelName = body.name;
+
+    if (!modelName) {
+      return new Response('Model name is required', { status: 400 });
+    }
+
+    const response = await fetch(`${ollamaBaseUrl}/api/pull`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ name: modelName, stream: true }),
+    });
+    
+    if (!response.ok || !response.body) {
+      const errorText = await response.text();
+      console.error('Failed to pull model:', errorText);
+      return new Response(errorText, { status: response.status });
+    }
+    
+    // Stream the response back to the client
+    const reader = response.body.getReader();
+    const stream = new ReadableStream({
+      async start(controller) {
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) {
+            break;
+          }
+          controller.enqueue(value);
+        }
+        controller.close();
+      },
+    });
+
+    return new Response(stream, {
+      headers: { 'Content-Type': 'application/json; charset=utf-8' },
+    });
+  } catch (error: any) {
+    console.error('Error pulling model:', error);
+    return new Response(JSON.stringify({ error: 'Failed to pull model', details: error.message }), { status: 500 });
+  }
 }

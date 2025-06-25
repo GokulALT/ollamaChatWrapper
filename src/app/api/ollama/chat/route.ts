@@ -2,7 +2,7 @@
 import { type NextRequest } from 'next/server';
 import type { ChatMessageData } from '@/types/chat';
 
-// Helper to parse OpenAI-compatible Server-Sent Events (SSE) stream
+// Helper to parse OpenAI-compatible Server-Sent Events (SSE) stream (for MCP)
 async function* OpenAIStreamTransformer(stream: ReadableStream<Uint8Array>): AsyncIterable<string> {
   const reader = stream.getReader();
   const decoder = new TextDecoder();
@@ -31,7 +31,7 @@ async function* OpenAIStreamTransformer(stream: ReadableStream<Uint8Array>): Asy
               yield content;
             }
           } catch (e) {
-            console.error("Failed to parse JSON chunk from stream:", jsonStr);
+            console.error("Failed to parse JSON chunk from OpenAI stream:", jsonStr, e);
           }
         }
       }
@@ -44,18 +44,55 @@ async function* OpenAIStreamTransformer(stream: ReadableStream<Uint8Array>): Asy
   }
 }
 
+// Helper to parse Ollama's native streaming format (for Direct mode)
+async function* OllamaStreamTransformer(stream: ReadableStream<Uint8Array>): AsyncIterable<string> {
+  const reader = stream.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || ''; // Keep the last partial line in buffer
+
+      for (const line of lines) {
+        if (line.trim()) {
+          try {
+            const jsonChunk = JSON.parse(line);
+            const content = jsonChunk.message?.content;
+            if (content) {
+              yield content;
+            }
+            if (jsonChunk.done) {
+              return;
+            }
+          } catch (e) {
+            console.error("Failed to parse JSON chunk from Ollama stream:", line, e);
+          }
+        }
+      }
+    }
+  } catch (error) {
+    console.error("Error transforming Ollama stream:", error);
+    yield "[Error processing response]";
+  } finally {
+    reader.releaseLock();
+  }
+}
 
 export async function POST(req: NextRequest) {
-  // This now points to your MCP server URL.
-  const mcpBaseUrl = process.env.OLLAMA_BASE_URL || 'http://localhost:8008';
+  const ollamaBaseUrl = process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
   try {
-    const { model, messages, system } = (await req.json()) as { model: string; messages: ChatMessageData[]; system?: string };
+    const { model, messages, system, connectionMode } = (await req.json()) as { model: string; messages: ChatMessageData[]; system?: string; connectionMode: 'mcp' | 'direct' };
 
     if (!model || !messages) {
       return new Response(JSON.stringify({ error: 'Missing model or messages in request body' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
 
-    // Transform messages for the OpenAI-compatible API
     const apiMessages = messages.map(msg => ({
       role: msg.sender === 'user' ? 'user' : 'assistant',
       content: msg.text,
@@ -65,14 +102,34 @@ export async function POST(req: NextRequest) {
       apiMessages.unshift({ role: 'system', content: system });
     }
 
-    const requestBody = {
-      model: model,
-      messages: apiMessages,
-      stream: true,
-    };
+    let apiEndpoint: string;
+    let requestBody: any;
+    let responseStreamTransformer: (stream: ReadableStream<Uint8Array>) => AsyncIterable<string>;
 
-    // MCP uses the /chat/completions endpoint, similar to OpenAI.
-    const mcpResponse = await fetch(`${mcpBaseUrl}/chat/completions`, {
+    if (connectionMode === 'mcp') {
+      apiEndpoint = `${ollamaBaseUrl}/chat/completions`;
+      requestBody = {
+        model: model,
+        messages: apiMessages,
+        stream: true,
+      };
+      responseStreamTransformer = OpenAIStreamTransformer;
+    } else { // Direct Mode
+      apiEndpoint = `${ollamaBaseUrl}/api/chat`;
+      // Direct Ollama uses a different body structure
+      const directMessages = messages.map(m => ({ role: m.sender, content: m.text }));
+      requestBody = {
+        model: model,
+        messages: directMessages,
+        stream: true,
+        options: {
+          system: system,
+        }
+      };
+      responseStreamTransformer = OllamaStreamTransformer;
+    }
+
+    const apiResponse = await fetch(apiEndpoint, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -80,22 +137,22 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify(requestBody),
     });
 
-    if (!mcpResponse.ok || !mcpResponse.body) {
-      const errorBody = await mcpResponse.text();
-      console.error(`MCP chat API error: ${mcpResponse.status} ${mcpResponse.statusText}`, errorBody);
-      return new Response(JSON.stringify({ error: `MCP API error: ${mcpResponse.statusText}`, details: errorBody }), { status: mcpResponse.status, headers: { 'Content-Type': 'application/json' } });
+    if (!apiResponse.ok || !apiResponse.body) {
+      const errorBody = await apiResponse.text();
+      console.error(`API error: ${apiResponse.status} ${apiResponse.statusText}`, errorBody);
+      return new Response(JSON.stringify({ error: `API error: ${apiResponse.statusText}`, details: errorBody }), { status: apiResponse.status, headers: { 'Content-Type': 'application/json' } });
     }
     
     const transformedStream = new ReadableStream({
       async start(controller) {
         const encoder = new TextEncoder();
-        for await (const contentChunk of OpenAIStreamTransformer(mcpResponse.body)) {
+        for await (const contentChunk of responseStreamTransformer(apiResponse.body!)) {
           controller.enqueue(encoder.encode(contentChunk));
         }
         controller.close();
       },
       cancel() {
-        mcpResponse.body?.cancel();
+        apiResponse.body?.cancel();
       }
     });
 
