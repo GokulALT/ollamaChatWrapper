@@ -58,7 +58,63 @@ In essence, MCP acts as a bridge, connecting AI models to the vast resources ava
 
 *   [Node.js](https://nodejs.org/) (version 18 or later recommended)
 *   [npm](https://www.npmjs.com/) or [yarn](https://yarnpkg.com/)
-*   A running [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server instance on your local machine, configured with one or more model providers (like Ollama) and any desired tools (like `server-filesystem`).
+*   [Ollama](https://ollama.com/) installed and running with at least one model pulled (e.g., `ollama run llama3`).
+
+## Setting Up a Local MCP Server
+
+Chat Studio is an MCP Client. To use its full potential (including tools), you'll need to run an MCP server locally. This server acts as a bridge between Chat Studio and your models/tools. Here’s a quick guide to get you started.
+
+For detailed instructions, always refer to the [official MCP Quickstart](https://modelcontextprotocol.io/quickstart/user).
+
+#### 1. Download MCP Components
+
+You'll need at least two executables from the [MCP Releases page on GitHub](https://github.com/model-context-protocol/mcp/releases):
+
+*   **The MCP Server**: The core engine (e.g., `mcp-server.exe` on Windows).
+*   **A Model Provider**: Connects to your language models (e.g., `provider-ollama.exe`).
+*   **(Optional) Tools**: To add capabilities, download tool servers like `server-filesystem.exe`.
+
+Download the latest executables for your operating system and place them all in the **same directory**.
+
+#### 2. Create a Configuration File
+
+In the same directory, create a file named `mcp_config.json`. This file tells the MCP server which models and tools to load.
+
+Here is a sample configuration that enables the Ollama provider and the filesystem tool:
+
+```json
+{
+  "listen": "localhost:8008",
+  "providers": [
+    {
+      "path": "./provider-ollama",
+      "listen": "tcp"
+    }
+  ],
+  "tools": [
+    {
+      "name": "filesystem",
+      "path": "./server-filesystem",
+      "listen": "tcp"
+    }
+  ]
+}
+```
+*Note: On Windows, you might need to add the `.exe` extension to the paths (e.g., `"./provider-ollama.exe"`).*
+
+#### 3. Run the MCP Server
+
+Open a terminal or command prompt, navigate to your directory, and run the server:
+
+```bash
+# On Linux/macOS
+./mcp-server --config mcp_config.json
+
+# On Windows
+./mcp-server.exe --config mcp_config.json
+```
+
+If successful, you'll see log messages indicating the server is running on `localhost:8008`.
 
 ## Getting Started
 
@@ -72,7 +128,7 @@ In essence, MCP acts as a bridge, connecting AI models to the vast resources ava
     ```
 
 3.  **Configure Environment Variables:**
-    Create a `.env` file in the root of your project and add the base URL for your MCP server.
+    Create a `.env` file in the root of your project. The URL must match the `listen` address from your `mcp_config.json`.
     ```env
     # This must be the URL of your MCP server, e.g., http://localhost:8008
     OLLAMA_BASE_URL=http://localhost:8008
@@ -87,7 +143,7 @@ In essence, MCP acts as a bridge, connecting AI models to the vast resources ava
     ```
     The application will typically be available at `http://localhost:9002`.
 
-5.  **Open your browser** and navigate to the application URL. If your MCP server is running and accessible, you'll be able to select a model and start chatting.
+5.  **Open your browser** and navigate to the application URL. In the settings, ensure you are in "MCP Server" mode. If your MCP server is running, you'll be able to select a model and start chatting.
 
 ## Project Structure
 
