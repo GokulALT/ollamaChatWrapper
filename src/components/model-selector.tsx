@@ -130,7 +130,7 @@ export function ModelSelector({ selectedModel, onSelectModel, refreshKey, connec
         </SidebarGroupContent>
       </SidebarGroup>
 
-      {connectionMode === 'mcp' && tools.length > 0 && (
+      {connectionMode === 'mcp' && models.length > 0 && tools.length > 0 && (
         <SidebarGroup className="group-data-[collapsible=icon]:py-0">
           <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden">Available Tools</SidebarGroupLabel>
           <SidebarGroupContent>
