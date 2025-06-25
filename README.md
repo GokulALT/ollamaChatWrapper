@@ -2,6 +2,46 @@
 
 This is a Next.js application built with Firebase Studio that acts as a powerful AI assistant. It connects to a **Model Context Protocol (MCP)** server, allowing you to chat with large language models that can be augmented with specialized tools and data sources. It features a clean user interface built with ShadCN UI components and Tailwind CSS.
 
+## The Model Context Protocol (MCP)
+
+The Model Context Protocol (MCP) employs a client-host-server architecture to enable AI models to interact with various tools and data sources. It standardizes communication between AI applications and external systems, akin to how USB-C connects devices to peripherals.
+
+Here's a breakdown of the key components:
+
+### 1. Host (Client Application)
+
+- This is the AI-powered application, such as a chatbot, IDE, or voice assistant.
+- It houses the MCP Client, responsible for capturing user intent and refining it into a query.
+- The MCP Client acts as an interface, managing connections to MCP servers and handling security.
+- It can connect to multiple MCP servers, each exposing different tools or resources.
+
+### 2. Server
+
+- MCP servers are the integration and execution layer, connecting to various data sources (local or remote).
+- They receive requests from the client, interface with external tools (APIs, databases, etc.), and structure the retrieved data.
+- The server then returns structured responses that the AI model can understand and process.
+- Servers provide context and tools to the clients, maintaining a stateful connection over a session.
+
+### 3. Protocol
+
+- MCP uses JSON-RPC as its foundation, providing a standardized way to exchange messages between clients and servers.
+- The protocol handles the details of communication, like formatting messages, managing IDs, and error handling.
+- This ensures that both the client and server stay synchronized and can interpret each other's messages correctly.
+
+### 4. Data Flow
+
+- MCP enables bidirectional data flow between AI models and external systems.
+- This allows AI models to be interactive and aware of their surroundings, facilitating more nuanced and functional applications.
+
+### 5. Key Benefits
+
+-   **Standardization:** MCP provides a common interface for AI models to interact with different tools and data sources.
+-   **Extensibility:** The architecture allows for easy addition of new tools and data sources to the ecosystem.
+-   **Scalability:** MCP enables distributed and dynamic tool deployment and discovery.
+-   **Security:** MCP maintains clear security boundaries and isolates concerns between different components.
+
+In essence, MCP acts as a bridge, connecting AI models to the vast resources available in the real world, making them more powerful and versatile.
+
 ## Features
 
 *   **AI Assistant Interface**: Engage in conversations with your selected language model.
