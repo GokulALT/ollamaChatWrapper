@@ -7,7 +7,7 @@ export async function GET(req: NextRequest) {
   const serverName = mode.toUpperCase();
 
   try {
-    const endpoint = mode === 'direct' ? `${baseUrl}/api/tags` : baseUrl;
+    const endpoint = mode === 'direct' ? `${baseUrl}/api/tags` : `${baseUrl}/v1/models`;
     const response = await fetch(endpoint, { method: 'GET', signal: AbortSignal.timeout(3000) }); // 3-second timeout
     
     if (response.ok) {

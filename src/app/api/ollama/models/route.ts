@@ -7,8 +7,8 @@ export async function GET(req: NextRequest) {
 
   try {
     if (mode === 'mcp') {
-      // MCP exposes an OpenAI-compatible /models endpoint
-      const response = await fetch(`${ollamaBaseUrl}/models`);
+      // MCP exposes an OpenAI-compatible /v1/models endpoint
+      const response = await fetch(`${ollamaBaseUrl}/v1/models`);
       if (!response.ok) {
         const errorBody = await response.text();
         console.error(`MCP API error: ${response.status} ${response.statusText}`, errorBody);

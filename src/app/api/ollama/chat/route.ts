@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
     let responseStreamTransformer: (stream: ReadableStream<Uint8Array>) => AsyncIterable<string>;
 
     if (connectionMode === 'mcp') {
-      apiEndpoint = `${ollamaBaseUrl}/chat/completions`;
+      apiEndpoint = `${ollamaBaseUrl}/v1/chat/completions`;
       requestBody = {
         model: model,
         messages: apiMessages,
