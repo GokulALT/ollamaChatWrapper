@@ -122,7 +122,7 @@ export function ChatWindow({ selectedModel, newChatKey, systemPrompt }: ChatWind
       if (err.name === 'AbortError') {
         console.log('Fetch aborted.');
       } else {
-        console.error("Error sending message to Ollama:", err);
+        console.error("Error sending message to API:", err);
         toast({
           variant: "destructive",
           title: "Chat Error",

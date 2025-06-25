@@ -2,8 +2,8 @@
 import { type NextRequest } from 'next/server';
 import type { ChatMessageData } from '@/types/chat';
 
-// Helper to parse newline-delimited JSON stream from Ollama
-async function* OllamaResponseTransformer(stream: ReadableStream<Uint8Array>): AsyncIterable<string> {
+// Helper to parse OpenAI-compatible Server-Sent Events (SSE) stream
+async function* OpenAIStreamTransformer(stream: ReadableStream<Uint8Array>): AsyncIterable<string> {
   const reader = stream.getReader();
   const decoder = new TextDecoder();
   let buffer = '';
@@ -12,51 +12,42 @@ async function* OllamaResponseTransformer(stream: ReadableStream<Uint8Array>): A
     while (true) {
       const { done, value } = await reader.read();
       if (done) {
-        if (buffer.trim()) {
-          try {
-            const jsonChunk = JSON.parse(buffer);
-            if (jsonChunk.message && jsonChunk.message.content) {
-              yield jsonChunk.message.content;
-            }
-          } catch (e) {
-            console.error("Failed to parse final JSON chunk:", buffer);
-          }
-        }
         break;
       }
       buffer += decoder.decode(value, { stream: true });
       const lines = buffer.split('\n');
-      buffer = lines.pop() || ''; // Keep the last partial line
+      buffer = lines.pop() || ''; // Keep the last partial line in buffer
 
       for (const line of lines) {
-        if (line.trim()) {
+        if (line.startsWith('data: ')) {
+          const jsonStr = line.substring(6);
+          if (jsonStr.trim() === '[DONE]') {
+            return; // End of stream
+          }
           try {
-            const jsonChunk = JSON.parse(line);
-            if (jsonChunk.message && jsonChunk.message.content) {
-              yield jsonChunk.message.content;
+            const jsonChunk = JSON.parse(jsonStr);
+            const content = jsonChunk.choices?.[0]?.delta?.content;
+            if (content) {
+              yield content;
             }
-            if (jsonChunk.done) { // Check for done flag within a line
-              return; // End generation if Ollama signals done
-            }
-          } catch(e) {
-            console.error("Failed to parse JSON chunk:", line);
+          } catch (e) {
+            console.error("Failed to parse JSON chunk from stream:", jsonStr);
           }
         }
       }
     }
   } catch (error) {
-    console.error("Error transforming Ollama stream:", error);
-    // Optionally yield an error message or handle differently
-    yield "[Error processing Ollama response]";
-  }
-  finally {
+    console.error("Error transforming OpenAI compatible stream:", error);
+    yield "[Error processing response]";
+  } finally {
     reader.releaseLock();
   }
 }
 
 
 export async function POST(req: NextRequest) {
-  const ollamaBaseUrl = process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
+  // This now points to your MCP server URL.
+  const mcpBaseUrl = process.env.OLLAMA_BASE_URL || 'http://localhost:8008';
   try {
     const { model, messages, system } = (await req.json()) as { model: string; messages: ChatMessageData[]; system?: string };
 
@@ -64,23 +55,24 @@ export async function POST(req: NextRequest) {
       return new Response(JSON.stringify({ error: 'Missing model or messages in request body' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
 
-    // Transform messages for Ollama API
-    const ollamaMessages = messages.map(msg => ({
+    // Transform messages for the OpenAI-compatible API
+    const apiMessages = messages.map(msg => ({
       role: msg.sender === 'user' ? 'user' : 'assistant',
       content: msg.text,
     }));
 
-    const requestBody: any = {
+    if (system && system.trim()) {
+      apiMessages.unshift({ role: 'system', content: system });
+    }
+
+    const requestBody = {
       model: model,
-      messages: ollamaMessages,
+      messages: apiMessages,
       stream: true,
     };
 
-    if (system && system.trim()) {
-      requestBody.system = system;
-    }
-
-    const ollamaResponse = await fetch(`${ollamaBaseUrl}/api/chat`, {
+    // MCP uses the /chat/completions endpoint, similar to OpenAI.
+    const mcpResponse = await fetch(`${mcpBaseUrl}/chat/completions`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -88,22 +80,22 @@ export async function POST(req: NextRequest) {
       body: JSON.stringify(requestBody),
     });
 
-    if (!ollamaResponse.ok || !ollamaResponse.body) {
-      const errorBody = await ollamaResponse.text();
-      console.error(`Ollama chat API error: ${ollamaResponse.status} ${ollamaResponse.statusText}`, errorBody);
-      return new Response(JSON.stringify({ error: `Ollama API error: ${ollamaResponse.statusText}`, details: errorBody }), { status: ollamaResponse.status, headers: { 'Content-Type': 'application/json' } });
+    if (!mcpResponse.ok || !mcpResponse.body) {
+      const errorBody = await mcpResponse.text();
+      console.error(`MCP chat API error: ${mcpResponse.status} ${mcpResponse.statusText}`, errorBody);
+      return new Response(JSON.stringify({ error: `MCP API error: ${mcpResponse.statusText}`, details: errorBody }), { status: mcpResponse.status, headers: { 'Content-Type': 'application/json' } });
     }
     
     const transformedStream = new ReadableStream({
       async start(controller) {
         const encoder = new TextEncoder();
-        for await (const contentChunk of OllamaResponseTransformer(ollamaResponse.body)) {
+        for await (const contentChunk of OpenAIStreamTransformer(mcpResponse.body)) {
           controller.enqueue(encoder.encode(contentChunk));
         }
         controller.close();
       },
       cancel() {
-        ollamaResponse.body?.cancel();
+        mcpResponse.body?.cancel();
       }
     });
 
@@ -112,7 +104,7 @@ export async function POST(req: NextRequest) {
     });
 
   } catch (error: any) {
-    console.error('Error in /api/ollama/chat:', error);
+    console.error('Error in chat API route:', error);
     return new Response(JSON.stringify({ error: 'Failed to process chat request.', details: error.message }), { status: 500, headers: { 'Content-Type': 'application/json' } });
   }
 }

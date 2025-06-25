@@ -2,23 +2,19 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Activity, CheckCircle2, WifiOff, Loader2, Cpu, MemoryStick } from 'lucide-react';
+import { Activity, CheckCircle2, WifiOff, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 
-interface OllamaStatusState {
+interface MCPStatusState {
   online: boolean | null; // null for initial loading state
   message: string;
-  cpuUsage: number | null;
-  ramUsage: number | null;
 }
 
 export function OllamaStatus() {
-  const [status, setStatus] = useState<OllamaStatusState>({
+  const [status, setStatus] = useState<MCPStatusState>({
     online: null,
     message: 'Checking status...',
-    cpuUsage: null,
-    ramUsage: null,
   });
   const [isLoading, setIsLoading] = useState(true);
 
@@ -31,16 +27,12 @@ export function OllamaStatus() {
         setStatus({
           online: data.online,
           message: data.message,
-          cpuUsage: Math.floor(Math.random() * 100), // Simulated CPU Usage
-          ramUsage: Math.floor(Math.random() * 70) + 20, // Simulated RAM Usage (20-90%)
         });
       } catch (error) {
-        console.error("Error fetching Ollama status:", error);
+        console.error("Error fetching MCP status:", error);
         setStatus({
           online: false,
           message: 'Failed to fetch status from API.',
-          cpuUsage: Math.floor(Math.random() * 100),
-          ramUsage: Math.floor(Math.random() * 70) + 20,
         });
       } finally {
         setIsLoading(false);
@@ -57,7 +49,7 @@ export function OllamaStatus() {
     <div className="p-2 space-y-1 text-sm group-data-[collapsible=icon]:p-0 group-data-[collapsible=icon]:flex group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:items-center">
       <div className="flex items-center gap-2 group-data-[collapsible=icon]:justify-center group-data-[collapsible=icon]:w-full group-data-[collapsible=icon]:p-2">
         <Activity size={18} className="text-sidebar-foreground" />
-        <h3 className="font-medium text-sidebar-foreground group-data-[collapsible=icon]:hidden">Ollama Status</h3>
+        <h3 className="font-medium text-sidebar-foreground group-data-[collapsible=icon]:hidden">MCP Status</h3>
       </div>
       
       <div className="pl-1 text-xs text-sidebar-foreground/80 group-data-[collapsible=icon]:hidden">
@@ -67,14 +59,6 @@ export function OllamaStatus() {
           </div>
         ) : (
           <>
-            <div className="flex items-center gap-1.5 mt-1.5">
-              <Cpu size={12} className="text-sidebar-foreground/70" />
-              CPU Usage: {status.cpuUsage !== null ? `${status.cpuUsage}%` : 'N/A'}
-            </div>
-            <div className="flex items-center gap-1.5 mt-1">
-              <MemoryStick size={12} className="text-sidebar-foreground/70" />
-              RAM Usage: {status.ramUsage !== null ? `${status.ramUsage}%` : 'N/A'}
-            </div>
             <div className="flex items-center gap-1.5 mt-1.5">
               Status: {status.online ? (
                 <Badge variant="outline" className="bg-green-500/10 border-green-500/30 text-green-700 dark:text-green-400 text-[0.7rem] px-1.5 py-0.5">
