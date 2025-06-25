@@ -1,23 +1,24 @@
-# Chat Studio - Chat with Local LLMs via MCP
+# Chat Studio - Your AI Assistant powered by MCP
 
-This is a Next.js application built with Firebase Studio that allows you to chat with large language models (LLMs) managed by a local **Model Context Protocol (MCP)** server. It features a clean user interface built with ShadCN UI components and Tailwind CSS.
+This is a Next.js application built with Firebase Studio that acts as a powerful AI assistant. It connects to a **Model Context Protocol (MCP)** server, allowing you to chat with large language models that can be augmented with specialized tools and data sources. It features a clean user interface built with ShadCN UI components and Tailwind CSS.
 
 ## Features
 
-*   **Chat Interface**: Engage in conversations with your selected local LLM.
-*   **Model Selection**: Dynamically lists and allows you to choose from available models on your MCP server.
+*   **AI Assistant Interface**: Engage in conversations with your selected language model.
+*   **MCP Tool Support**: Leverage any specialized server (tool) configured on your MCP server. For example, use the `filesystem` tool to have the assistant read and analyze local files by referencing them in your prompt (e.g., `Summarize the file at file://filesystem/path/to/your/document.txt`).
+*   **Model Selection**: Dynamically lists and allows you to choose from available models and tools on your MCP server.
 *   **New Chat Session**: Easily clear the current conversation and start a new one.
 *   **MCP Server Status**: Displays the connectivity status to your local MCP server.
 *   **System Prompts**: Configure a system-wide prompt to guide the behavior of your models.
 *   **Multi-line Input**: Supports multi-line message input with Shift+Enter for newlines.
-*   **Responsive Design**: Adapts to different screen sizes.
 *   **Markdown Rendering**: Chat messages can render Markdown for richer text formatting.
+*   **Dark Mode**: Includes a theme toggle for light and dark modes.
 
 ## Prerequisites
 
 *   [Node.js](https://nodejs.org/) (version 18 or later recommended)
 *   [npm](https://www.npmjs.com/) or [yarn](https://yarnpkg.com/)
-*   A running [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server instance on your local machine, configured with one or more model providers (like Ollama).
+*   A running [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server instance on your local machine, configured with one or more model providers (like Ollama) and any desired tools (like `server-filesystem`).
 
 ## Getting Started
 
@@ -31,9 +32,9 @@ This is a Next.js application built with Firebase Studio that allows you to chat
     ```
 
 3.  **Configure Environment Variables:**
-    Create a `.env` file in the root of your project and add the base URL for your MCP server. **Note**: The variable is named `OLLAMA_BASE_URL` for compatibility with the existing code, but it should point to your MCP server.
+    Create a `.env` file in the root of your project and add the base URL for your MCP server.
     ```env
-    # This should be the URL of your MCP server, e.g., http://localhost:8008
+    # This must be the URL of your MCP server, e.g., http://localhost:8008
     OLLAMA_BASE_URL=http://localhost:8008
     ```
     Adjust the URL if your MCP server is running on a different port or host.
@@ -67,9 +68,9 @@ This is a Next.js application built with Firebase Studio that allows you to chat
 ## Tech Stack
 
 *   **Framework**: [Next.js](https://nextjs.org/)
+*   **Backend Protocol**: [Model Context Protocol (MCP)](https://modelcontextprotocol.io/)
 *   **UI Library**: [ShadCN UI](https://ui.shadcn.com/)
 *   **Styling**: [Tailwind CSS](https://tailwindcss.com/)
-*   **Model Backend**: [Model Context Protocol (MCP)](https://modelcontextprotocol.io/)
 *   **Language**: [TypeScript](https://www.typescriptlang.org/)
 *   **Icons**: [Lucide React](https://lucide.dev/)
 *   **Markdown**: [React Markdown](https://github.com/remarkjs/react-markdown)
