@@ -62,7 +62,15 @@ In essence, MCP acts as a bridge, connecting AI models to the vast resources ava
 
 ## Setting Up a Local MCP Server
 
-Chat Studio is an MCP Client. To use its full potential (including tools), you'll need to run an MCP server locally. This server acts as a bridge between Chat Studio and your models/tools. Here’s a quick guide to get you started.
+Chat Studio is an MCP Client. To use its full potential (including tools), you'll need to run an MCP server locally. This server acts as a bridge between Chat Studio and your models/tools.
+
+You have two main options for running an MCP server:
+
+1.  **Use the Included TypeScript Example Server (Recommended & More Customizable)**: This project includes a ready-to-run example server in the `mcp-server-example` folder. It's a great starting point if you want to build your own tools in TypeScript. See the [**README in that folder**](./mcp-server-example/README.md) for setup instructions.
+
+2.  **Use the Pre-built Executables**: For a quick start, you can download and run the official MCP server binaries.
+
+### Using Pre-built Executables
 
 For detailed instructions, always refer to the [official MCP Quickstart](https://modelcontextprotocol.io/quickstart/user).
 
@@ -116,7 +124,7 @@ Open a terminal or command prompt, navigate to your directory, and run the serve
 
 If successful, you'll see log messages indicating the server is running on `localhost:8008`.
 
-## Getting Started
+## Getting Started with Chat Studio
 
 1.  **Clone the repository (if applicable) or ensure you have the project files.**
 
@@ -128,7 +136,7 @@ If successful, you'll see log messages indicating the server is running on `loca
     ```
 
 3.  **Configure Environment Variables:**
-    Create a `.env` file in the root of your project. The URL must match the `listen` address from your `mcp_config.json`.
+    Create a `.env` file in the root of your project. The URL must match the `listen` address from your MCP server (either the example server or the one from `mcp_config.json`).
     ```env
     # This must be the URL of your MCP server, e.g., http://localhost:8008
     OLLAMA_BASE_URL=http://localhost:8008
@@ -155,6 +163,7 @@ If successful, you'll see log messages indicating the server is running on `loca
     *   `src/components/chat-window.tsx`: The main chat interface component.
     *   `src/components/model-selector.tsx`: Component for selecting models.
     *   `src/components/ollama-status.tsx`: Component for displaying MCP server status.
+*   `mcp-server-example/`: A standalone, customizable MCP server built with TypeScript.
 *   `src/lib/`: Utility functions.
 *   `src/types/`: TypeScript type definitions.
 *   `public/`: Static assets.
