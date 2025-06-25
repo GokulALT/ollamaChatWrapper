@@ -1,6 +1,6 @@
 # Chat Studio - Your AI Assistant powered by MCP
 
-This is a Next.js application built with Firebase Studio that acts as a powerful AI assistant. It connects to a **Model Context Protocol (MCP)** server, allowing you to chat with large language models that can be augmented with specialized tools and data sources. It features a clean user interface built with ShadCN UI components and Tailwind CSS.
+This is a Next.js application built with Firebase Studio that acts as a powerful AI assistant. In Chat Studio, the AI models communicate with **Model Context Protocol (MCP)** servers, allowing them to be augmented with specialized tools and data sources. This turns a simple chat into a powerful, context-aware conversation. The application features a clean user interface built with ShadCN UI components and Tailwind CSS.
 
 ## The Model Context Protocol (MCP)
 
