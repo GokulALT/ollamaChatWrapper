@@ -1,3 +1,4 @@
+
 # Chat Studio - Your AI Assistant and MCP Client
 
 This is Chat Studio, a Next.js application that serves as a powerful **MCP Client**. It acts as an AI assistant that communicates with **Model Context Protocol (MCP)** servers, allowing language models to be augmented with specialized tools and data sources. This turns a simple chat into a powerful, context-aware conversation. The application features a clean user interface built with ShadCN UI components and Tailwind CSS.
@@ -49,7 +50,7 @@ In essence, MCP acts as a bridge, connecting AI models to the vast resources ava
     *   **Direct Mode**: Connect directly to a local Ollama instance for simple chat.
     *   **MCP Mode**: Connect to an MCP server to leverage specialized tools.
     *   **RAG Mode**: Chat with your own documents using a local vector database.
-*   **RAG (Retrieval-Augmented Generation)**: Upload `.txt` documents to a ChromaDB collection. Chat Studio will use these documents to provide context-aware answers.
+*   **RAG (Retrieval-Augmented Generation)**: Upload `.txt` and `.docx` documents to a ChromaDB collection. Chat Studio will use these documents to provide context-aware answers.
 *   **MCP Tool Support**: In MCP mode, leverage any tool configured on your server (e.g., `filesystem` to analyze local files).
 *   **Model & Collection Selection**: Dynamically select AI models, and in RAG mode, choose your document collection from the sidebar.
 *   **Transparent Context**: In RAG mode, see exactly which document sources were used to generate an answer.
@@ -141,12 +142,23 @@ If successful, you'll see log messages indicating the server is running on `loca
     ```
 
 3.  **Configure Environment Variables:**
-    Create a `.env` file in the root of your project. The URL must match the `listen` address from your MCP server (either the example server or the one from `mcp_config.json`).
+    Create a `.env` file in the root of your project by copying the provided template, and adjust the values as needed.
+
     ```env
-    # This must be the URL of your MCP server, e.g., http://localhost:8008
-    OLLAMA_BASE_URL=http://localhost:8008
+    # In Direct/RAG mode, use your Ollama URL (e.g., http://localhost:11434).
+    # In MCP mode, use your MCP server URL (e.g., http://localhost:8008).
+    OLLAMA_BASE_URL=http://localhost:11434
+
+    # The URL for your ChromaDB server, used in RAG mode.
+    CHROMA_URL=http://localhost:8000
+
+    # --- Optional: ChromaDB Authentication ---
+    # Set the method and credentials if your ChromaDB requires a login.
+    # CHROMA_AUTH_METHOD= # 'token' or 'basic'
+    # CHROMA_TOKEN=
+    # CHROMA_USERNAME=
+    # CHROMA_PASSWORD=
     ```
-    Adjust the URL if your MCP server is running on a different port or host.
 
 4.  **Run the development server:**
     ```bash
@@ -156,7 +168,7 @@ If successful, you'll see log messages indicating the server is running on `loca
     ```
     The application will typically be available at `http://localhost:9002`.
 
-5.  **Open your browser** and navigate to the application URL. In the settings, ensure you are in "MCP Server" mode. If your MCP server is running, you'll be able to select a model and start chatting.
+5.  **Open your browser** and navigate to the application URL. You can select a connection mode in the settings.
 
 ## Using RAG (Retrieval-Augmented Generation) Mode
 
@@ -164,7 +176,7 @@ In addition to the standard chat modes, Chat Studio includes a powerful RAG mode
 
 ### How it Works
 
-1.  **Upload**: You upload `.txt` files to a "collection" in the RAG settings.
+1.  **Upload**: You upload `.txt` or `.docx` files to a "collection" in the RAG settings.
 2.  **Embed**: Chat Studio chunks the text, converts it into numerical representations (embeddings) using a local Ollama model (`nomic-embed-text`), and stores them in a ChromaDB vector database.
 3.  **Retrieve**: When you ask a question, the app embeds your query and searches ChromaDB for the most relevant chunks of text from your documents.
 4.  **Generate**: This retrieved context is then passed to your selected language model along with your question, allowing the AI to generate an answer based on the content of your documents.
@@ -175,18 +187,35 @@ For RAG mode to function, you need to have **ChromaDB** running locally, in addi
 
 1.  **Install Docker**: If you don't have it, install [Docker Desktop](https://www.docker.com/products/docker-desktop/).
 
-2.  **Run ChromaDB**: Open your terminal and run the following command:
+2.  **Run ChromaDB**: Open your terminal and run the following command to start an unsecured ChromaDB instance:
     ```bash
     docker run -p 8000:8000 ghcr.io/chroma-core/chroma
     ```
-    This will download the ChromaDB image and start it on `localhost:8000`, which is where Chat Studio expects to find it.
+    This will download the ChromaDB image and start it on `localhost:8000`, which is where Chat Studio expects to find it by default.
+
+### Connecting to a Secured ChromaDB
+
+If your ChromaDB instance requires authentication, you can configure the credentials in your `.env` file. Chat Studio supports both token (bearer) and basic authentication.
+
+**For token authentication:**
+```env
+CHROMA_AUTH_METHOD=token
+CHROMA_TOKEN=your_bearer_token_here
+```
+
+**For basic authentication:**
+```env
+CHROMA_AUTH_METHOD=basic
+CHROMA_USERNAME=your_username
+CHROMA_PASSWORD=your_password
+```
 
 ### Using RAG in Chat Studio
 
 1.  In the Chat Studio settings, switch the **Connection Mode** to **RAG**.
 2.  Open the settings again and go to the **RAG** tab.
 3.  **Create a collection** to hold your documents.
-4.  **Upload** one or more `.txt` files to your new collection.
+4.  **Upload** one or more `.txt` or `.docx` files to your new collection.
 5.  Return to the main chat screen.
 6.  Select your **collection** and an **AI model** from the sidebar.
 7.  You can now start asking questions about your documents!

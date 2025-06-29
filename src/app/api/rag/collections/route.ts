@@ -1,11 +1,30 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
-import { ChromaClient } from 'chromadb';
+import { ChromaClient, type ChromaClientParams } from 'chromadb';
+
+// Helper function to get ChromaClient with authentication support
+function getChromaClient() {
+    const chromaUrl = process.env.CHROMA_URL || 'http://localhost:8000';
+    const authMethod = process.env.CHROMA_AUTH_METHOD;
+    const token = process.env.CHROMA_TOKEN;
+    const username = process.env.CHROMA_USERNAME;
+    const password = process.env.CHROMA_PASSWORD;
+
+    const params: ChromaClientParams = { path: chromaUrl };
+
+    if (authMethod === 'token' && token) {
+        params.auth = { token };
+    } else if (authMethod === 'basic' && username && password) {
+        params.auth = { username, password };
+    }
+    
+    return new ChromaClient(params);
+}
+
 
 export async function GET(req: NextRequest) {
-    const chromaUrl = process.env.CHROMA_URL || 'http://localhost:8000';
     try {
-        const chroma = new ChromaClient({ path: chromaUrl });
+        const chroma = getChromaClient();
         const collections = await chroma.listCollections();
         return NextResponse.json(collections);
     } catch (error: any) {
@@ -15,13 +34,12 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-    const chromaUrl = process.env.CHROMA_URL || 'http://localhost:8000';
     try {
         const { name } = await req.json();
         if (!name) {
             return NextResponse.json({ error: 'Collection name is required' }, { status: 400 });
         }
-        const chroma = new ChromaClient({ path: chromaUrl });
+        const chroma = getChromaClient();
         const collection = await chroma.createCollection({ name });
         return NextResponse.json(collection);
     } catch (error: any) {
@@ -35,7 +53,6 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-    const chromaUrl = process.env.CHROMA_URL || 'http://localhost:8000';
     const { searchParams } = new URL(req.url);
     const name = searchParams.get('name');
 
@@ -43,7 +60,7 @@ export async function DELETE(req: NextRequest) {
         if (!name) {
             return NextResponse.json({ error: 'Collection name is required' }, { status: 400 });
         }
-        const chroma = new ChromaClient({ path: chromaUrl });
+        const chroma = getChromaClient();
         await chroma.deleteCollection({ name });
         return NextResponse.json({ message: `Collection "${name}" deleted.` });
     } catch (error: any) {

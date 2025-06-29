@@ -1,7 +1,7 @@
 
 import { type NextRequest } from 'next/server';
-import { ChromaClient } from 'chromadb';
-import type { ChatMessageData } from '@/types/chat';
+import { ChromaClient, type ChromaClientParams } from 'chromadb';
+import type { ChatMessageData, Source } from '@/types/chat';
 
 export const runtime = 'edge';
 
@@ -36,10 +36,28 @@ class OllamaEmbeddingFunction {
     }
 }
 
+// Helper function to get ChromaClient with authentication support
+function getChromaClient() {
+    const chromaUrl = process.env.CHROMA_URL || 'http://localhost:8000';
+    const authMethod = process.env.CHROMA_AUTH_METHOD;
+    const token = process.env.CHROMA_TOKEN;
+    const username = process.env.CHROMA_USERNAME;
+    const password = process.env.CHROMA_PASSWORD;
+
+    const params: ChromaClientParams = { path: chromaUrl };
+
+    if (authMethod === 'token' && token) {
+        params.auth = { token };
+    } else if (authMethod === 'basic' && username && password) {
+        params.auth = { username, password };
+    }
+    
+    return new ChromaClient(params);
+}
+
 export async function POST(req: NextRequest) {
     const ollamaBaseUrl = process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
-    const chromaUrl = process.env.CHROMA_URL || 'http://localhost:8000';
-
+    
     try {
         const { model, messages, collection: collectionName, system } = (await req.json()) as {
             model: string;
@@ -61,7 +79,7 @@ export async function POST(req: NextRequest) {
         const latestQuery = messages[messages.length - 1].text;
 
         // 1. Get relevant context from ChromaDB
-        const chroma = new ChromaClient({ path: chromaUrl });
+        const chroma = getChromaClient();
         const embedder = new OllamaEmbeddingFunction(ollamaBaseUrl, 'nomic-embed-text');
         
         const collection = await chroma.getCollection({ name: collectionName, embeddingFunction: embedder });
