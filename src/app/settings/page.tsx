@@ -163,7 +163,7 @@ function DirectModelManager() {
 
 function RagManager() {
     const { toast } = useToast();
-    const [collections, setCollections] = useState<{name: string}[]>([]);
+    const [collections, setCollections] = useState<{id: string, name: string}[]>([]);
     const [selectedCollection, setSelectedCollection] = useState<string>('');
     const [newCollectionName, setNewCollectionName] = useState('');
     const [file, setFile] = useState<File | null>(null);
@@ -301,7 +301,7 @@ function RagManager() {
                                         <SelectValue placeholder={isLoadingCollections ? "Loading..." : "Select collection"} />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {collections.map(c => <SelectItem key={c.name} value={c.name}>{c.name}</SelectItem>)}
+                                        {collections.map(c => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
                                 <Button variant="destructive" size="icon" onClick={handleDeleteCollection} disabled={isDeleting || !selectedCollection}>
