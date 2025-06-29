@@ -26,7 +26,18 @@ export async function GET(req: NextRequest) {
     try {
         const chroma = getChromaClient();
         const collections = await chroma.listCollections();
-        return NextResponse.json(collections);
+
+        // The `chromadb` library is expected to return Collection objects, but in some environments
+        // it may return an array of strings. We format the response to what the frontend expects: { id: string, name: string }[]
+        const formattedCollections = collections.map((c: any) => {
+            if (typeof c === 'string') {
+                return { id: c, name: c }; // Handle if the API unexpectedly returns strings
+            }
+            // This is the expected path according to the library's types
+            return { id: c.id, name: c.name };
+        });
+
+        return NextResponse.json(formattedCollections);
     } catch (error: any) {
         console.error('Error listing collections:', error);
         return NextResponse.json({ error: 'Failed to list collections', details: error.message }, { status: 500 });
