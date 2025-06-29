@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect, FormEvent } from 'react';
-import type { ChatMessageData, Source } from '@/types/chat';
+import type { ChatMessageData, Source, ConnectionMode } from '@/types/chat';
 import { ChatMessage } from '@/components/chat-message';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -10,19 +10,18 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Send, AlertTriangle, Loader2, MessageSquare, BrainCircuit } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from "@/hooks/use-toast";
-import type { ConnectionMode } from '@/app/page';
 
 interface ChatWindowProps {
   selectedModel: string | null;
+  connectionMode: ConnectionMode;
   newChatKey: number;
   systemPrompt: string | null;
-  connectionMode: ConnectionMode;
   selectedCollection: string | null;
 }
 
 const RESPONSE_SEPARATOR = '_--_SEPARATOR_--_';
 
-export function ChatWindow({ selectedModel, newChatKey, systemPrompt, connectionMode, selectedCollection }: ChatWindowProps) {
+export function ChatWindow({ selectedModel, connectionMode, newChatKey, systemPrompt, selectedCollection }: ChatWindowProps) {
   const [messages, setMessages] = useState<ChatMessageData[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -51,7 +50,7 @@ export function ChatWindow({ selectedModel, newChatKey, systemPrompt, connection
     setMessages([]);
     setInput('');
     setIsLoading(false);
-  }, [newChatKey]);
+  }, [newChatKey, connectionMode]);
 
   const handleMcpDirectChat = async (newMessages: ChatMessageData[]) => {
      const response = await fetch('/api/ollama/chat', {
