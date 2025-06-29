@@ -1,7 +1,7 @@
 
 "use client";
 
-import React, { useState, useEffect, FormEvent } from 'react';
+import React, { useState, useEffect, FormEvent, useCallback } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -18,8 +18,10 @@ import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from "@/hooks/use-toast";
-import { Info, Trash2, Loader2, DownloadCloud } from 'lucide-react';
+import { Info, Trash2, Loader2, DownloadCloud, Upload, Database, CheckCircle2, WifiOff } from 'lucide-react';
 import type { ConnectionMode } from '@/app/page';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 
 interface SettingsDialogProps {
   isOpen: boolean;
@@ -29,6 +31,7 @@ interface SettingsDialogProps {
   onModelsUpdate: () => void;
   connectionMode: ConnectionMode;
   onConnectionModeChange: (mode: ConnectionMode) => void;
+  onRagUpdate: () => void;
 }
 
 interface Model {
@@ -93,9 +96,7 @@ function DirectModelManager({ onModelsUpdate }: { onModelsUpdate: () => void }) 
                     try {
                         const json = JSON.parse(line);
                         setPullStatus(json.status);
-                    } catch (e) {
-                        // ignore parse errors
-                    }
+                    } catch (e) { /* ignore parse errors */ }
                 });
             }
 
@@ -147,9 +148,7 @@ function DirectModelManager({ onModelsUpdate }: { onModelsUpdate: () => void }) 
             </div>
             <div>
                 <h4 className="text-sm font-medium mb-2">Local Models</h4>
-                {isLoading ? (
-                    <Loader2 className="animate-spin" />
-                ) : (
+                {isLoading ? ( <Loader2 className="animate-spin" /> ) : (
                     <ScrollArea className="h-48 rounded-md border">
                         <div className="p-2 space-y-1">
                             {models.length > 0 ? models.map(model => (
@@ -168,6 +167,166 @@ function DirectModelManager({ onModelsUpdate }: { onModelsUpdate: () => void }) 
     )
 }
 
+function RagManager({ onRagUpdate }: { onRagUpdate: () => void }) {
+    const { toast } = useToast();
+    const [collections, setCollections] = useState<{name: string}[]>([]);
+    const [selectedCollection, setSelectedCollection] = useState<string>('');
+    const [newCollectionName, setNewCollectionName] = useState('');
+    const [file, setFile] = useState<File | null>(null);
+    const [isUploading, setIsUploading] = useState(false);
+    const [isCreating, setIsCreating] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [isLoadingCollections, setIsLoadingCollections] = useState(true);
+
+    const fetchCollections = useCallback(async () => {
+        setIsLoadingCollections(true);
+        try {
+            const res = await fetch('/api/rag/collections');
+            if (!res.ok) throw new Error('Failed to fetch collections');
+            const data = await res.json();
+            setCollections(data);
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: "Error", description: error.message });
+        } finally {
+            setIsLoadingCollections(false);
+        }
+    }, [toast]);
+
+    useEffect(() => {
+        fetchCollections();
+    }, [fetchCollections]);
+
+    const handleCreateCollection = async (e: FormEvent) => {
+        e.preventDefault();
+        if (!newCollectionName.trim()) return;
+        setIsCreating(true);
+        try {
+            const res = await fetch('/api/rag/collections', {
+                method: 'POST',
+                body: JSON.stringify({ name: newCollectionName }),
+                headers: { 'Content-Type': 'application/json' }
+            });
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.error);
+            }
+            toast({ title: 'Collection Created', description: `Successfully created "${newCollectionName}".` });
+            setNewCollectionName('');
+            await fetchCollections();
+            onRagUpdate();
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: "Creation Failed", description: error.message });
+        } finally {
+            setIsCreating(false);
+        }
+    };
+    
+    const handleDeleteCollection = async () => {
+        if (!selectedCollection) return;
+        setIsDeleting(true);
+        try {
+             const res = await fetch(`/api/rag/collections?name=${selectedCollection}`, { method: 'DELETE' });
+             if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.error);
+            }
+            toast({ title: 'Collection Deleted', description: `Successfully deleted "${selectedCollection}".` });
+            setSelectedCollection('');
+            await fetchCollections();
+            onRagUpdate();
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: "Deletion Failed", description: error.message });
+        } finally {
+            setIsDeleting(false);
+        }
+    };
+
+    const handleFileUpload = async (e: FormEvent) => {
+        e.preventDefault();
+        if (!file || !selectedCollection) {
+            toast({ variant: 'destructive', title: "Upload Error", description: "Please select a collection and a file." });
+            return;
+        }
+        setIsUploading(true);
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('collectionName', selectedCollection);
+
+        try {
+            const res = await fetch('/api/rag/upload', {
+                method: 'POST',
+                body: formData,
+            });
+            if (!res.ok) {
+                const err = await res.json();
+                throw new Error(err.error);
+            }
+            const result = await res.json();
+            toast({ title: "Upload Successful", description: `${result.count} chunks added to "${selectedCollection}".` });
+            setFile(null);
+            // clear the file input
+            const fileInput = document.getElementById('file-upload') as HTMLInputElement;
+            if (fileInput) fileInput.value = '';
+        } catch (error: any) {
+            toast({ variant: 'destructive', title: "Upload Failed", description: error.message });
+        } finally {
+            setIsUploading(false);
+        }
+    };
+
+    return (
+        <div className="space-y-6">
+            <Alert>
+                <Database className="h-4 w-4" />
+                <AlertTitle>RAG Mode</AlertTitle>
+                <AlertDescription>
+                   Upload .txt documents to a ChromaDB collection. The AI will use these documents to answer your questions.
+                   Make sure ChromaDB is running on port 8000.
+                </AlertDescription>
+            </Alert>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <Label htmlFor="new-collection">New Collection</Label>
+                <form onSubmit={handleCreateCollection} className="flex items-center gap-2">
+                    <Input id="new-collection" placeholder="my-document-set" value={newCollectionName} onChange={e => setNewCollectionName(e.target.value)} disabled={isCreating} />
+                    <Button type="submit" disabled={isCreating || !newCollectionName.trim()}>
+                        {isCreating ? <Loader2 className="animate-spin" /> : "Create"}
+                    </Button>
+                </form>
+              </div>
+              <div className="space-y-1">
+                <Label>Manage Collection</Label>
+                 <div className="flex items-center gap-2">
+                    <Select value={selectedCollection} onValueChange={setSelectedCollection} disabled={isLoadingCollections || isDeleting}>
+                        <SelectTrigger>
+                            <SelectValue placeholder={isLoadingCollections ? "Loading..." : "Select collection"} />
+                        </SelectTrigger>
+                        <SelectContent>
+                            {collections.map(c => <SelectItem key={c.name} value={c.name}>{c.name}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                     <Button variant="destructive" size="icon" onClick={handleDeleteCollection} disabled={isDeleting || !selectedCollection}>
+                         {isDeleting ? <Loader2 className="animate-spin" size={16} /> : <Trash2 size={16} />}
+                    </Button>
+                 </div>
+              </div>
+            </div>
+            
+            <div>
+                <Label htmlFor="file-upload">Upload Document (.txt)</Label>
+                <form onSubmit={handleFileUpload} className="flex items-center gap-2 mt-1">
+                     <Input id="file-upload" type="file" accept=".txt" onChange={e => setFile(e.target.files ? e.target.files[0] : null)} disabled={isUploading || !selectedCollection} />
+                     <Button type="submit" disabled={isUploading || !file || !selectedCollection}>
+                        {isUploading ? <Loader2 className="animate-spin" /> : <Upload />}
+                    </Button>
+                </form>
+                {!selectedCollection && <p className="text-xs text-muted-foreground mt-1">Select a collection to enable upload.</p>}
+            </div>
+        </div>
+    );
+}
+
 export function SettingsDialog({
   isOpen,
   onOpenChange,
@@ -175,10 +334,12 @@ export function SettingsDialog({
   onSystemPromptChange,
   onModelsUpdate,
   connectionMode,
-  onConnectionModeChange
+  onConnectionModeChange,
+  onRagUpdate
 }: SettingsDialogProps) {
   const { toast } = useToast();
   const [currentSystemPrompt, setCurrentSystemPrompt] = useState(systemPrompt || '');
+  const [activeTab, setActiveTab] = useState("chat-settings");
 
   useEffect(() => {
     setCurrentSystemPrompt(systemPrompt || '');
@@ -194,9 +355,22 @@ export function SettingsDialog({
     }
     toast({
       title: "System Prompt Saved",
-      description: "Start a new chat to apply the changes.",
+      description: "This will be applied to new chat sessions.",
     });
   };
+
+  const TABS_FOR_MODE: Record<ConnectionMode, string[]> = {
+    'direct': ["chat-settings", "manage-models"],
+    'mcp': ["chat-settings", "manage-models"],
+    'rag': ["chat-settings", "rag"],
+  };
+
+  useEffect(() => {
+    // If the current tab doesn't exist for the new mode, switch to the first available tab
+    if (!TABS_FOR_MODE[connectionMode].includes(activeTab)) {
+        setActiveTab(TABS_FOR_MODE[connectionMode][0]);
+    }
+  }, [connectionMode, activeTab]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
@@ -204,18 +378,18 @@ export function SettingsDialog({
         <DialogHeader>
           <DialogTitle>Settings</DialogTitle>
           <DialogDescription>
-            Configure chat settings and manage your connection.
+            Configure chat settings, manage models, and set up RAG.
           </DialogDescription>
         </DialogHeader>
         
         <div className="py-4 border-b">
             <Label>Connection Mode</Label>
-            <RadioGroup value={connectionMode} onValueChange={onConnectionModeChange} className="grid grid-cols-2 gap-4 mt-2">
+            <RadioGroup value={connectionMode} onValueChange={(val) => onConnectionModeChange(val as ConnectionMode)} className="grid grid-cols-3 gap-4 mt-2">
                 <div>
                     <RadioGroupItem value="direct" id="direct" className="peer sr-only" />
                     <Label htmlFor="direct" className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary">
-                        Direct (Ollama)
-                        <span className="text-xs text-muted-foreground font-normal mt-1 text-center">Connect directly to a local Ollama instance.</span>
+                        Direct
+                        <span className="text-xs text-muted-foreground font-normal mt-1 text-center">Connect to a local Ollama instance.</span>
                     </Label>
                 </div>
                  <div>
@@ -225,14 +399,22 @@ export function SettingsDialog({
                         <span className="text-xs text-muted-foreground font-normal mt-1 text-center">Connect to a Model Context Protocol server.</span>
                     </Label>
                 </div>
+                 <div>
+                    <RadioGroupItem value="rag" id="rag" className="peer sr-only" />
+                    <Label htmlFor="rag" className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary">
+                        RAG
+                        <span className="text-xs text-muted-foreground font-normal mt-1 text-center">Chat with your own documents via ChromaDB.</span>
+                    </Label>
+                </div>
             </RadioGroup>
         </div>
         
         <div className="flex-grow overflow-hidden">
-        <Tabs defaultValue="chat-settings" className="flex flex-col h-full">
-          <TabsList className="grid w-full grid-cols-2 mt-4">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
+          <TabsList className="grid w-full grid-cols-3 mt-4">
             <TabsTrigger value="chat-settings">Chat Settings</TabsTrigger>
-            <TabsTrigger value="manage-models">Manage Models</TabsTrigger>
+            <TabsTrigger value="manage-models" disabled={connectionMode === 'rag'}>Manage Models</TabsTrigger>
+            <TabsTrigger value="rag" disabled={connectionMode !== 'rag'}>RAG</TabsTrigger>
           </TabsList>
           
           <TabsContent value="chat-settings" className="flex-grow flex flex-col gap-4 py-4 overflow-y-auto">
@@ -246,7 +428,7 @@ export function SettingsDialog({
                 className="flex-grow text-sm min-h-[150px]"
               />
               <p className="text-sm text-muted-foreground">
-                The system prompt is sent to the model with every new conversation to set its behavior.
+                The system prompt sets the AI's behavior. (In RAG mode, a default prompt is used to focus on context).
               </p>
             </div>
             <DialogFooter className="mt-auto pt-4">
@@ -260,12 +442,16 @@ export function SettingsDialog({
                     <Info className="w-10 h-10 mb-4 text-muted-foreground" />
                     <h3 className="text-lg font-semibold">Model Management via MCP</h3>
                     <p className="text-sm text-muted-foreground mt-2 max-w-sm">
-                        To add, remove, or update models, please edit your Model Context Protocol (MCP) server's configuration file and restart the server.
+                        To add, remove, or update models, please edit your MCP server's configuration and restart it.
                     </p>
                 </div>
              ) : (
                 <DirectModelManager onModelsUpdate={onModelsUpdate} />
              )}
+          </TabsContent>
+
+          <TabsContent value="rag" className="flex-grow flex flex-col gap-4 py-4 overflow-y-auto">
+              <RagManager onRagUpdate={onRagUpdate} />
           </TabsContent>
         </Tabs>
         </div>

@@ -5,8 +5,15 @@ import type { ChatMessageData } from '@/types/chat';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { User, Bot } from 'lucide-react';
+import { User, Bot, BookCopy } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import { ScrollArea } from './ui/scroll-area';
 
 interface ChatMessageProps {
   message: ChatMessageData;
@@ -61,7 +68,33 @@ export function ChatMessage({ message }: ChatMessageProps) {
           >
             {message.text}
           </ReactMarkdown>
-          <p className="text-xs mt-1 opacity-70">
+
+          {message.sources && message.sources.length > 0 && (
+            <Accordion type="single" collapsible className="w-full mt-2">
+              <AccordionItem value="item-1" className="border-t pt-2">
+                <AccordionTrigger className="text-xs py-1 hover:no-underline [&[data-state=open]>svg]:text-primary">
+                  <div className="flex items-center gap-1.5">
+                    <BookCopy size={12} />
+                    Show Context ({message.sources.length})
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <ScrollArea className="h-32 mt-2">
+                    <div className="space-y-2 pr-4">
+                      {message.sources.map((source, index) => (
+                        <div key={index} className="p-2 bg-muted/50 rounded-md text-xs">
+                          <p className="truncate text-muted-foreground">Source {index + 1}</p>
+                          <p className="mt-1 whitespace-pre-wrap">{source.pageContent}</p>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                </AccordionContent>
+              </AccordionItem>
+            </Accordion>
+          )}
+
+          <p className="text-xs mt-2 opacity-70">
             {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             {message.model && !isUser && ` · ${message.model}`}
           </p>

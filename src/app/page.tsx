@@ -5,6 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { ChatWindow } from '@/components/chat-window';
 import { ModelSelector } from '@/components/model-selector';
 import { OllamaStatus } from '@/components/ollama-status';
+import { RagStatus } from '@/components/rag-status';
 import {
   Sidebar,
   SidebarContent,
@@ -17,11 +18,12 @@ import {
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { MessageSquare, FilePlus2, Settings } from 'lucide-react';
+import { MessageSquare, FilePlus2, Settings, Database } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { SettingsDialog } from '@/components/settings-dialog';
+import { CollectionSelector } from '@/components/collection-selector';
 
-export type ConnectionMode = 'mcp' | 'direct';
+export type ConnectionMode = 'mcp' | 'direct' | 'rag';
 
 export default function Home() {
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
@@ -29,7 +31,9 @@ export default function Home() {
   const [systemPrompt, setSystemPrompt] = useState<string | null>(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [modelRefreshKey, setModelRefreshKey] = useState<number>(Date.now());
-  const [connectionMode, setConnectionMode] = useState<ConnectionMode>('mcp');
+  const [connectionMode, setConnectionMode] = useState<ConnectionMode>('direct');
+  const [selectedCollection, setSelectedCollection] = useState<string | null>(null);
+  const [ragUpdateKey, setRagUpdateKey] = useState<number>(Date.now());
 
   useEffect(() => {
     try {
@@ -41,8 +45,11 @@ export default function Home() {
       if (storedMode) {
         setConnectionMode(storedMode);
       } else {
-        // Default to direct if nothing is stored, as it's the simpler setup.
         setConnectionMode('direct');
+      }
+      const storedCollection = localStorage.getItem('selected_collection');
+      if (storedCollection) {
+        setSelectedCollection(storedCollection);
       }
     } catch (error) {
       console.warn("Could not access localStorage.");
@@ -53,8 +60,9 @@ export default function Home() {
     setNewChatKey(Date.now());
   };
 
-  const handleRefreshModels = () => {
+  const handleRefresh = () => {
     setModelRefreshKey(Date.now());
+    setRagUpdateKey(Date.now());
   };
 
   const handleConnectionModeChange = (mode: ConnectionMode) => {
@@ -64,11 +72,32 @@ export default function Home() {
     } catch (error) {
       console.warn("Could not access localStorage to set connection mode.");
     }
-    // Reset selection and refresh models when mode changes
     setSelectedModel(null);
-    handleRefreshModels();
+    setSelectedCollection(null);
+    handleRefresh();
     handleNewChat();
   };
+
+  const handleSelectCollection = (collection: string | null) => {
+    setSelectedCollection(collection);
+    if(collection) {
+      try {
+        localStorage.setItem('selected_collection', collection);
+      } catch (error) {
+        console.warn("Could not access localStorage to set selected collection.");
+      }
+    } else {
+      localStorage.removeItem('selected_collection');
+    }
+    handleNewChat();
+  };
+
+  const getHeaderTitle = () => {
+    if (connectionMode === 'rag') {
+      return selectedCollection ? `RAG: ${selectedCollection}` : 'Select a Collection';
+    }
+    return selectedModel ? `${selectedModel}` : 'Select a Model';
+  }
 
   return (
     <SidebarProvider defaultOpen={true} >
@@ -93,12 +122,26 @@ export default function Home() {
             </Button>
           </div>
           <div className="flex-grow overflow-y-auto">
-            <ModelSelector selectedModel={selectedModel} onSelectModel={setSelectedModel} refreshKey={modelRefreshKey} connectionMode={connectionMode} />
+            {connectionMode === 'rag' ? (
+              <CollectionSelector 
+                selectedCollection={selectedCollection} 
+                onSelectCollection={handleSelectCollection} 
+                refreshKey={ragUpdateKey}
+              />
+            ) : (
+              <ModelSelector 
+                selectedModel={selectedModel} 
+                onSelectModel={setSelectedModel} 
+                refreshKey={modelRefreshKey} 
+                connectionMode={connectionMode} 
+              />
+            )}
           </div>
         </SidebarContent>
         <SidebarFooter className="p-0 mt-auto">
           <Separator className="my-0 bg-sidebar-border group-data-[collapsible=icon]:hidden" />
           <OllamaStatus connectionMode={connectionMode} />
+          {connectionMode === 'rag' && <RagStatus />}
         </SidebarFooter>
         <SidebarRail />
       </Sidebar>
@@ -108,7 +151,7 @@ export default function Home() {
            <div className="flex items-center gap-2">
             <SidebarTrigger className="md:hidden -ml-2" /> 
             <h1 className="text-lg font-semibold font-headline text-foreground truncate pl-1 md:pl-0">
-                {selectedModel ? `${selectedModel}` : 'Select a Model'}
+                {getHeaderTitle()}
             </h1>
            </div>
           <div className="flex items-center gap-1">
@@ -121,7 +164,13 @@ export default function Home() {
         </header>
         
         <main className="flex-1 overflow-hidden h-[calc(100vh-57px)]">
-          <ChatWindow selectedModel={selectedModel} newChatKey={newChatKey} systemPrompt={systemPrompt} connectionMode={connectionMode} />
+          <ChatWindow 
+            selectedModel={selectedModel} 
+            newChatKey={newChatKey} 
+            systemPrompt={systemPrompt} 
+            connectionMode={connectionMode}
+            selectedCollection={selectedCollection}
+          />
         </main>
       </SidebarInset>
 
@@ -130,9 +179,10 @@ export default function Home() {
         onOpenChange={setIsSettingsOpen}
         systemPrompt={systemPrompt}
         onSystemPromptChange={setSystemPrompt}
-        onModelsUpdate={handleRefreshModels}
+        onModelsUpdate={handleRefresh}
         connectionMode={connectionMode}
         onConnectionModeChange={handleConnectionModeChange}
+        onRagUpdate={handleRefresh}
       />
     </SidebarProvider>
   );
