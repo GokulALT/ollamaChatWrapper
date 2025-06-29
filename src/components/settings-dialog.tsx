@@ -16,23 +16,20 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from "@/hooks/use-toast";
-import { Info, Trash2, Loader2, DownloadCloud, Upload, Database, Server, Bot, BrainCircuit } from 'lucide-react';
+import { Info, Trash2, Loader2, DownloadCloud, Upload, Database } from 'lucide-react';
 import type { ConnectionMode } from '@/types/chat';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 
 interface SettingsDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
-  connectionMode: ConnectionMode;
-  onConnectionModeChange: (mode: ConnectionMode) => void;
   systemPrompt: string | null;
   onSystemPromptChange: (prompt: string | null) => void;
   onModelsUpdate: () => void;
   onRagUpdate: () => void;
+  connectionMode: ConnectionMode;
 }
 
 interface Model {
@@ -157,18 +154,16 @@ function DirectModelManager({ onModelsUpdate }: { onModelsUpdate: () => void }) 
                 </CardHeader>
                 <CardContent>
                     {isLoading ? ( <div className="flex justify-center items-center h-24"><Loader2 className="animate-spin" /></div> ) : (
-                        <ScrollArea className="rounded-md border max-h-48">
-                            <div className="p-2 space-y-1">
-                                {models.length > 0 ? models.map(model => (
-                                    <div key={model.name} className="flex items-center justify-between p-2 rounded hover:bg-muted">
-                                        <span className="text-sm truncate">{model.name}</span>
-                                        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleDeleteModel(model.name)} disabled={!!deletingModel}>
-                                            {deletingModel === model.name ? <Loader2 className="animate-spin" size={16} /> : <Trash2 size={16} />}
-                                        </Button>
-                                    </div>
-                                )) : <p className="text-sm text-muted-foreground p-4 text-center">No local models found.</p>}
-                            </div>
-                        </ScrollArea>
+                        <div className="p-2 space-y-1 rounded-md border max-h-48 overflow-y-auto">
+                            {models.length > 0 ? models.map(model => (
+                                <div key={model.name} className="flex items-center justify-between p-2 rounded hover:bg-muted">
+                                    <span className="text-sm truncate">{model.name}</span>
+                                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleDeleteModel(model.name)} disabled={!!deletingModel}>
+                                        {deletingModel === model.name ? <Loader2 className="animate-spin" size={16} /> : <Trash2 size={16} />}
+                                    </Button>
+                                </div>
+                            )) : <p className="text-sm text-muted-foreground p-4 text-center">No local models found.</p>}
+                        </div>
                     )}
                 </CardContent>
             </Card>
@@ -351,12 +346,11 @@ function RagManager({ onRagUpdate }: { onRagUpdate: () => void }) {
 export function SettingsDialog({
   isOpen,
   onOpenChange,
-  connectionMode,
-  onConnectionModeChange,
   systemPrompt,
   onSystemPromptChange,
   onModelsUpdate,
   onRagUpdate,
+  connectionMode,
 }: SettingsDialogProps) {
   const { toast } = useToast();
   const [currentSystemPrompt, setCurrentSystemPrompt] = useState(systemPrompt || '');
@@ -399,40 +393,13 @@ export function SettingsDialog({
           </TabsList>
           
           <TabsContent value="general" className="flex-grow flex flex-col gap-4 py-4 overflow-y-auto">
-             <Card>
-                <CardHeader>
-                    <CardTitle className="text-base">Connection Mode</CardTitle>
-                    <CardDescription>Select how you want to connect to the AI model.</CardDescription>
-                </CardHeader>
-                 <CardContent>
-                    <RadioGroup
-                        value={connectionMode}
-                        onValueChange={(value) => onConnectionModeChange(value as ConnectionMode)}
-                    >
-                        <Label className="flex items-center gap-4 rounded-md border p-4 cursor-pointer hover:bg-muted/50 has-[[data-state=checked]]:border-primary">
-                            <RadioGroupItem value="direct" id="direct-mode" />
-                            <div className="grid gap-1.5">
-                                <div className="font-semibold flex items-center gap-2"><Bot size={16}/> Direct Mode</div>
-                                <div className="text-sm text-muted-foreground">Connect directly to a local Ollama instance. Simple and fast for basic chat.</div>
-                            </div>
-                        </Label>
-                        <Label className="flex items-center gap-4 rounded-md border p-4 cursor-pointer hover:bg-muted/50 has-[[data-state=checked]]:border-primary">
-                            <RadioGroupItem value="mcp" id="mcp-mode" />
-                            <div className="grid gap-1.5">
-                                <div className="font-semibold flex items-center gap-2"><Server size={16}/> MCP Server Mode</div>
-                                <div className="text-sm text-muted-foreground">Connect to an MCP server to leverage tools and more advanced features.</div>
-                            </div>
-                        </Label>
-                        <Label className="flex items-center gap-4 rounded-md border p-4 cursor-pointer hover:bg-muted/50 has-[[data-state=checked]]:border-primary">
-                            <RadioGroupItem value="rag" id="rag-mode" />
-                            <div className="grid gap-1.5">
-                                <div className="font-semibold flex items-center gap-2"><BrainCircuit size={16}/> RAG Mode</div>
-                                <div className="text-sm text-muted-foreground">Chat with your own documents using a local vector database.</div>
-                            </div>
-                        </Label>
-                    </RadioGroup>
-                </CardContent>
-            </Card>
+            <Alert>
+                <Info className="h-4 w-4" />
+                <AlertTitle>Tip</AlertTitle>
+                <AlertDescription>
+                    You can switch between Direct, MCP, and RAG connection modes using the main sidebar navigation.
+                </AlertDescription>
+            </Alert>
             <div className="space-y-2 flex-grow flex flex-col px-1">
               <Label htmlFor="system-prompt">System Prompt</Label>
               <Textarea

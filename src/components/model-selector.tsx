@@ -4,6 +4,14 @@
 import React, { useState, useEffect } from 'react';
 import { Cpu, AlertTriangle, Wrench } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
+  SidebarGroup,
+  SidebarGroupLabel,
+  SidebarGroupContent
+} from '@/components/ui/sidebar';
 import type { ConnectionMode } from '@/types/chat';
 
 interface Model {
@@ -29,7 +37,6 @@ export function ModelSelector({ selectedModel, onSelectModel, refreshKey, connec
       setIsLoading(true);
       setError(null);
       try {
-        // RAG mode uses the 'direct' connection to ollama for generation
         const fetchMode = connectionMode === 'rag' ? 'direct' : connectionMode;
         const response = await fetch(`/api/ollama/models?mode=${fetchMode}`);
         if (!response.ok) {
@@ -51,14 +58,11 @@ export function ModelSelector({ selectedModel, onSelectModel, refreshKey, connec
         setModels(availableModels);
         setTools(availableTools);
 
-        // Auto-select the first model if none is selected and models are available
         if (!selectedModel && availableModels.length > 0) {
           onSelectModel(availableModels[0].id);
         } else if (availableModels.length > 0 && selectedModel && !availableModels.some(m => m.id === selectedModel)) {
-          // If the selected model is not in the new list, select the first one
           onSelectModel(availableModels[0].id);
         } else if (availableModels.length === 0) {
-          // No models available, so deselect any current model
           onSelectModel(null);
         }
 
@@ -78,58 +82,71 @@ export function ModelSelector({ selectedModel, onSelectModel, refreshKey, connec
 
   return (
     <>
-      <div className="px-2">
-        <h3 className="text-sm font-semibold text-muted-foreground px-2 mb-2">Available Models</h3>
-        {isLoading && (
-          <div className="space-y-1 p-1">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="flex items-center rounded-md p-2">
-                <Skeleton className="h-4 w-4 mr-2" />
-                <Skeleton className="h-4 w-3/4" />
-              </div>
-            ))}
-          </div>
-        )}
-        {!isLoading && error && (
-          <div className="p-2 text-xs text-destructive flex items-center gap-2">
-            <AlertTriangle size={16} />
-            {error}
-          </div>
-        )}
-        {!isLoading && !error && models.length === 0 && (
-          <div className="p-2 text-xs text-muted-foreground flex items-center gap-2">
-            <Cpu size={16} />
-            No models found.
-          </div>
-        )}
-        <div className="space-y-1">
-          {!isLoading && !error && models.map((model) => (
-            <button
-              key={model.id}
-              onClick={() => onSelectModel(model.id)}
-              className={`w-full text-left text-sm p-2 rounded-md flex items-center gap-2 truncate ${
-                selectedModel === model.id ? 'bg-primary/10 text-primary font-semibold' : 'hover:bg-muted'
-              }`}
-            >
+      <SidebarGroup className="group-data-[collapsible=icon]:py-0">
+        <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden">Available Models</SidebarGroupLabel>
+        <SidebarGroupContent>
+          {isLoading && (
+            <SidebarMenu>
+              {[1, 2, 3].map((i) => (
+                <SidebarMenuItem key={i}>
+                  <div className="flex items-center w-full p-2">
+                      <Cpu size={18} className="mr-2 text-muted-foreground" />
+                      <Skeleton className="h-4 w-3/4" />
+                  </div>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          )}
+          {!isLoading && error && (
+            <div className="p-2 text-xs text-destructive flex items-center gap-2 group-data-[collapsible=icon]:justify-center">
+              <AlertTriangle size={16} />
+              <span className="group-data-[collapsible=icon]:hidden">{error}</span>
+            </div>
+          )}
+          {!isLoading && !error && models.length === 0 && (
+            <div className="p-2 text-xs text-muted-foreground flex items-center gap-2 group-data-[collapsible=icon]:justify-center">
               <Cpu size={16} />
-              {model.name}
-            </button>
-          ))}
-        </div>
-      </div>
+              <span className="group-data-[collapsible=icon]:hidden">No models found.</span>
+            </div>
+          )}
+          {!isLoading && !error && models.length > 0 && (
+            <SidebarMenu>
+              {models.map((model) => (
+                <SidebarMenuItem key={model.id}>
+                  <SidebarMenuButton
+                    onClick={() => onSelectModel(model.id)}
+                    isActive={selectedModel === model.id}
+                    tooltip={{ children: model.name, side: 'right', align: 'start', className: "ml-2"}}
+                  >
+                    <Cpu size={18} />
+                    <span className="group-data-[collapsible=icon]:hidden truncate">{model.name}</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+              ))}
+            </SidebarMenu>
+          )}
+        </SidebarGroupContent>
+      </SidebarGroup>
 
-      {connectionMode === 'mcp' && models.length > 0 && tools.length > 0 && (
-         <div className="px-2 mt-4">
-          <h3 className="text-sm font-semibold text-muted-foreground px-2 mb-2">Available Tools</h3>
-          <div className="space-y-1">
-            {tools.map((tool) => (
-              <div key={tool.id} className="text-sm p-2 flex items-center gap-2 text-muted-foreground">
-                <Wrench size={16} />
-                {tool.name.replace('tool/', '')}
-              </div>
-            ))}
-          </div>
-        </div>
+      {connectionMode === 'mcp' && !isLoading && !error && tools.length > 0 && (
+        <SidebarGroup className="group-data-[collapsible=icon]:py-0 mt-2">
+            <SidebarGroupLabel className="group-data-[collapsible=icon]:hidden">Available Tools</SidebarGroupLabel>
+            <SidebarGroupContent>
+                <SidebarMenu>
+                    {tools.map((tool) => (
+                        <SidebarMenuItem key={tool.id}>
+                            <SidebarMenuButton 
+                                className="cursor-default !bg-transparent !text-sidebar-foreground/70 hover:!bg-transparent"
+                                tooltip={{ children: tool.name.replace('tool/', ''), side: 'right', align: 'start', className: "ml-2"}}
+                            >
+                                <Wrench size={18} />
+                                <span className="group-data-[collapsible=icon]:hidden truncate">{tool.name.replace('tool/', '')}</span>
+                            </SidebarMenuButton>
+                        </SidebarMenuItem>
+                    ))}
+                </SidebarMenu>
+            </SidebarGroupContent>
+        </SidebarGroup>
       )}
     </>
   );
