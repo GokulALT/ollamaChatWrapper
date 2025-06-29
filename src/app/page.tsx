@@ -14,13 +14,10 @@ import {
   SidebarProvider,
   SidebarRail,
   SidebarTrigger,
-  SidebarMenu,
-  SidebarMenuItem,
-  SidebarMenuButton,
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { MessageSquare, FilePlus2, Settings, Server, BrainCircuit, Bot } from 'lucide-react';
+import { MessageSquare, FilePlus2, Settings } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { SettingsDialog } from '@/components/settings-dialog';
 import { CollectionSelector } from '@/components/collection-selector';
@@ -125,27 +122,6 @@ export default function Home() {
           
           <Separator className="my-2 group-data-[collapsible=icon]:hidden" />
 
-          <SidebarMenu>
-             <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => handleConnectionModeChange('direct')} isActive={connectionMode === 'direct'} tooltip={{ children: "Direct Mode" }}>
-                    <Bot size={18} />
-                    <span className="group-data-[collapsible=icon]:hidden">Direct Mode</span>
-                </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => handleConnectionModeChange('mcp')} isActive={connectionMode === 'mcp'} tooltip={{ children: "MCP Server Mode"}}>
-                    <Server size={18} />
-                    <span className="group-data-[collapsible=icon]:hidden">MCP Mode</span>
-                </SidebarMenuButton>
-            </SidebarMenuItem>
-            <SidebarMenuItem>
-                <SidebarMenuButton onClick={() => handleConnectionModeChange('rag')} isActive={connectionMode === 'rag'} tooltip={{ children: "RAG Mode" }}>
-                    <BrainCircuit size={18} />
-                    <span className="group-data-[collapsible=icon]:hidden">RAG Mode</span>
-                </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-
           <div className="flex-grow overflow-y-auto mt-4">
             {connectionMode === 'rag' && (
               <CollectionSelector 
@@ -206,6 +182,7 @@ export default function Home() {
         onModelsUpdate={handleRefresh}
         onRagUpdate={handleRefresh}
         connectionMode={connectionMode}
+        onConnectionModeChange={handleConnectionModeChange}
       />
     </SidebarProvider>
   );

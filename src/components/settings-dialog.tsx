@@ -21,6 +21,7 @@ import { Info, Trash2, Loader2, DownloadCloud, Upload, Database } from 'lucide-r
 import type { ConnectionMode } from '@/types/chat';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
+import { RadioGroup, RadioGroupItem } from './ui/radio-group';
 
 interface SettingsDialogProps {
   isOpen: boolean;
@@ -30,6 +31,7 @@ interface SettingsDialogProps {
   onModelsUpdate: () => void;
   onRagUpdate: () => void;
   connectionMode: ConnectionMode;
+  onConnectionModeChange: (mode: ConnectionMode) => void;
 }
 
 interface Model {
@@ -351,6 +353,7 @@ export function SettingsDialog({
   onModelsUpdate,
   onRagUpdate,
   connectionMode,
+  onConnectionModeChange,
 }: SettingsDialogProps) {
   const { toast } = useToast();
   const [currentSystemPrompt, setCurrentSystemPrompt] = useState(systemPrompt || '');
@@ -392,14 +395,31 @@ export function SettingsDialog({
             <TabsTrigger value="rag">RAG</TabsTrigger>
           </TabsList>
           
-          <TabsContent value="general" className="flex-grow flex flex-col gap-4 py-4 overflow-y-auto">
-            <Alert>
-                <Info className="h-4 w-4" />
-                <AlertTitle>Tip</AlertTitle>
-                <AlertDescription>
-                    You can switch between Direct, MCP, and RAG connection modes using the main sidebar navigation.
-                </AlertDescription>
-            </Alert>
+          <TabsContent value="general" className="flex-grow flex flex-col gap-6 py-4 overflow-y-auto">
+             <div className="space-y-2 px-1">
+                <Label>Connection Mode</Label>
+                 <RadioGroup
+                    value={connectionMode}
+                    onValueChange={(value) => onConnectionModeChange(value as ConnectionMode)}
+                    className="flex items-center space-x-4 pt-2"
+                >
+                    <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="direct" id="s-direct" />
+                        <Label htmlFor="s-direct" className="font-normal">Direct</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="mcp" id="s-mcp" />
+                        <Label htmlFor="s-mcp" className="font-normal">MCP</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                        <RadioGroupItem value="rag" id="s-rag" />
+                        <Label htmlFor="s-rag" className="font-normal">RAG</Label>
+                    </div>
+                </RadioGroup>
+                <p className="text-sm text-muted-foreground pt-1">
+                    Choose how to connect to your language models.
+                </p>
+             </div>
             <div className="space-y-2 flex-grow flex flex-col px-1">
               <Label htmlFor="system-prompt">System Prompt</Label>
               <Textarea
