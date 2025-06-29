@@ -286,9 +286,13 @@ function RagManager({ onRagUpdate }: { onRagUpdate: () => void }) {
         <div className="space-y-4">
             <Alert>
                 <Database className="h-4 w-4" />
-                <AlertTitle>RAG Mode</AlertTitle>
+                <AlertTitle>RAG Mode Prerequisites</AlertTitle>
                 <AlertDescription>
-                   Upload .txt documents to a ChromaDB collection. The AI will use these documents to answer your questions. Make sure ChromaDB is running on port 8000.
+                   For RAG mode to function, you need two services running locally:
+                   <ul className="list-disc list-inside mt-2 text-xs">
+                        <li><span className="font-semibold">ChromaDB Server:</span> The vector database for your documents (usually at http://localhost:8000).</li>
+                        <li><span className="font-semibold">Ollama:</span> Used for embedding documents and generating chat responses.</li>
+                   </ul>
                 </AlertDescription>
             </Alert>
             <Card>
