@@ -433,9 +433,6 @@ export function SettingsDialog({
                 Sets the AI's behavior. In RAG mode, this can be used to augment the default context prompt.
               </p>
             </div>
-            <DialogFooter className="mt-auto pt-4">
-              <Button onClick={() => { handleSaveSystemPrompt(); onOpenChange(false); }}>Save and Close</Button>
-            </DialogFooter>
           </TabsContent>
 
           <TabsContent value="models" className="flex-grow flex flex-col gap-4 py-4 overflow-y-auto px-1">
@@ -457,6 +454,9 @@ export function SettingsDialog({
           </TabsContent>
         </Tabs>
         </div>
+        <DialogFooter className="mt-auto pt-4">
+          <Button onClick={() => { handleSaveSystemPrompt(); onOpenChange(false); }}>Save and Close</Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
