@@ -2,6 +2,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { ModelSelector } from '@/components/model-selector';
 import { OllamaStatus } from '@/components/ollama-status';
 import { RagStatus } from '@/components/rag-status';
@@ -19,7 +20,6 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { MessageSquare, FilePlus2, Settings } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { SettingsDialog } from '@/components/settings-dialog';
 import { CollectionSelector } from '@/components/collection-selector';
 import type { ConnectionMode } from '@/types/chat';
 import { ChatWindow } from '@/components/chat-window';
@@ -29,7 +29,6 @@ export default function Home() {
   const [connectionMode, setConnectionMode] = useState<ConnectionMode>('direct');
   const [newChatKey, setNewChatKey] = useState<number>(Date.now());
   const [systemPrompt, setSystemPrompt] = useState<string | null>(null);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState<number>(Date.now());
   const [selectedCollection, setSelectedCollection] = useState<string | null>(null);
 
@@ -37,7 +36,13 @@ export default function Home() {
     try {
       const storedMode = localStorage.getItem('connection_mode') as ConnectionMode;
       if (storedMode && ['direct', 'mcp', 'rag'].includes(storedMode)) {
-        setConnectionMode(storedMode);
+        if (connectionMode !== storedMode) {
+            setConnectionMode(storedMode);
+            // Reset dependent state when mode changes
+            setSelectedModel(null);
+            setSelectedCollection(null);
+            handleNewChat();
+        }
       }
       const storedPrompt = localStorage.getItem('system_prompt');
       if (storedPrompt) setSystemPrompt(storedPrompt);
@@ -49,20 +54,9 @@ export default function Home() {
     } catch (error) {
       console.warn("Could not access localStorage.");
     }
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refreshKey]);
 
-  const handleConnectionModeChange = (mode: ConnectionMode) => {
-    setConnectionMode(mode);
-    setSelectedModel(null);
-    setSelectedCollection(null);
-    handleRefresh();
-    handleNewChat();
-    try {
-      localStorage.setItem('connection_mode', mode);
-    } catch (error) {
-      console.warn("Could not access localStorage.");
-    }
-  };
 
   const handleNewChat = () => {
     setNewChatKey(Date.now());
@@ -155,10 +149,12 @@ export default function Home() {
             </h1>
            </div>
           <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" onClick={() => setIsSettingsOpen(true)} title="Settings">
-              <Settings size={18} />
-              <span className="sr-only">Settings</span>
-            </Button>
+             <Link href="/settings" passHref legacyBehavior>
+                <Button variant="ghost" size="icon" title="Settings">
+                  <Settings size={18} />
+                  <span className="sr-only">Settings</span>
+                </Button>
+            </Link>
             <ThemeToggle />
           </div>
         </header>
@@ -173,17 +169,6 @@ export default function Home() {
           />
         </main>
       </SidebarInset>
-
-      <SettingsDialog
-        isOpen={isSettingsOpen}
-        onOpenChange={setIsSettingsOpen}
-        systemPrompt={systemPrompt}
-        onSystemPromptChange={setSystemPrompt}
-        onModelsUpdate={handleRefresh}
-        onRagUpdate={handleRefresh}
-        connectionMode={connectionMode}
-        onConnectionModeChange={handleConnectionModeChange}
-      />
     </SidebarProvider>
   );
 }
