@@ -165,7 +165,7 @@ function RagManager() {
     const { toast } = useToast();
     const [collections, setCollections] = useState<{id: string, name: string}[]>([]);
     const [selectedCollection, setSelectedCollection] = useState<string>('');
-    const [newCollectionName, setNewCollectionName] = useState('');
+    const [newDbName, setNewDbName] = useState('');
     const [file, setFile] = useState<File | null>(null);
     const [isUploading, setIsUploading] = useState(false);
     const [isCreating, setIsCreating] = useState(false);
@@ -192,20 +192,20 @@ function RagManager() {
 
     const handleCreateCollection = async (e: FormEvent) => {
         e.preventDefault();
-        if (!newCollectionName.trim()) return;
+        if (!newDbName.trim()) return;
         setIsCreating(true);
         try {
             const res = await fetch('/api/rag/collections', {
                 method: 'POST',
-                body: JSON.stringify({ name: newCollectionName }),
+                body: JSON.stringify({ name: newDbName }),
                 headers: { 'Content-Type': 'application/json' }
             });
             if (!res.ok) {
                 const err = await res.json();
                 throw new Error(err.error);
             }
-            toast({ title: 'Collection Created', description: `Successfully created "${newCollectionName}".` });
-            setNewCollectionName('');
+            toast({ title: 'Database Created', description: `Successfully created database "${newDbName}".` });
+            setNewDbName('');
             await fetchCollections();
         } catch (error: any) {
             toast({ variant: 'destructive', title: "Creation Failed", description: error.message });
@@ -223,7 +223,7 @@ function RagManager() {
                 const err = await res.json();
                 throw new Error(err.error);
             }
-            toast({ title: 'Collection Deleted', description: `Successfully deleted "${selectedCollection}".` });
+            toast({ title: 'Database Deleted', description: `Successfully deleted "${selectedCollection}".` });
             setSelectedCollection('');
             await fetchCollections();
         } catch (error: any) {
@@ -236,7 +236,7 @@ function RagManager() {
     const handleFileUpload = async (e: FormEvent) => {
         e.preventDefault();
         if (!file || !selectedCollection) {
-            toast({ variant: 'destructive', title: "Upload Error", description: "Please select a collection and a file." });
+            toast({ variant: 'destructive', title: "Upload Error", description: "Please select a database and a file." });
             return;
         }
         setIsUploading(true);
@@ -254,7 +254,7 @@ function RagManager() {
                 throw new Error(err.error || "An unknown error occurred during upload.");
             }
             const result = await res.json();
-            toast({ title: "Upload Successful", description: `${result.count} chunks added to "${selectedCollection}".` });
+            toast({ title: "Upload Successful", description: `${result.count} chunks added to database "${selectedCollection}".` });
             setFile(null);
             const fileInput = document.getElementById('file-upload') as HTMLInputElement;
             if (fileInput) fileInput.value = '';
@@ -280,25 +280,25 @@ function RagManager() {
             </Alert>
             <Card>
                 <CardHeader>
-                    <CardTitle className="text-base">Manage Collections</CardTitle>
+                    <CardTitle className="text-base">Manage Databases (Collections)</CardTitle>
                 </CardHeader>
                 <CardContent>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="space-y-1.5">
-                            <Label htmlFor="new-collection">Create Collection</Label>
+                            <Label htmlFor="new-collection">Create New Database</Label>
                             <form onSubmit={handleCreateCollection} className="flex items-center gap-2">
-                                <Input id="new-collection" placeholder="my-doc-set" value={newCollectionName} onChange={e => setNewCollectionName(e.target.value)} disabled={isCreating} />
-                                <Button type="submit" disabled={isCreating || !newCollectionName.trim()}>
-                                    {isCreating ? <Loader2 className="animate-spin" /> : "Create"}
+                                <Input id="new-collection" placeholder="e.g., project-docs" value={newDbName} onChange={e => setNewDbName(e.target.value)} disabled={isCreating} />
+                                <Button type="submit" disabled={isCreating || !newDbName.trim()}>
+                                    {isCreating ? <Loader2 className="animate-spin" /> : "Create Database"}
                                 </Button>
                             </form>
                         </div>
                         <div className="space-y-1.5">
-                            <Label>Delete Collection</Label>
+                            <Label>Delete Database</Label>
                             <div className="flex items-center gap-2">
                                 <Select value={selectedCollection} onValueChange={setSelectedCollection} disabled={isLoadingCollections || isDeleting}>
                                     <SelectTrigger>
-                                        <SelectValue placeholder={isLoadingCollections ? "Loading..." : "Select collection"} />
+                                        <SelectValue placeholder={isLoadingCollections ? "Loading..." : "Select database"} />
                                     </SelectTrigger>
                                     <SelectContent>
                                         {collections.map(c => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
@@ -314,8 +314,8 @@ function RagManager() {
             </Card>
             <Card>
                 <CardHeader>
-                    <CardTitle className="text-base">Upload Document</CardTitle>
-                    <CardDescription>Upload a .txt or .docx file to the selected collection to be embedded.</CardDescription>
+                    <CardTitle className="text-base">Upload Document to Database</CardTitle>
+                    <CardDescription>Upload a .txt or .docx file to the selected database to be embedded.</CardDescription>
                 </CardHeader>
                 <CardContent>
                      <form onSubmit={handleFileUpload} className="flex items-center gap-2">
@@ -324,7 +324,7 @@ function RagManager() {
                             {isUploading ? <Loader2 className="animate-spin" /> : <Upload size={18} />}
                         </Button>
                     </form>
-                    {!selectedCollection && <p className="text-xs text-muted-foreground mt-2">Select or create a collection to enable upload.</p>}
+                    {!selectedCollection && <p className="text-xs text-muted-foreground mt-2">Select or create a database to enable upload.</p>}
                 </CardContent>
             </Card>
         </div>
@@ -373,7 +373,7 @@ export default function SettingsPage() {
         <div className="flex flex-col h-screen bg-background">
             <header className="flex items-center justify-between p-3 border-b sticky top-0 z-10 bg-background">
                 <div className="flex items-center gap-4">
-                    <Button asChild variant="outline" size="icon" aria-label="Back to Chat">
+                     <Button asChild variant="outline" size="icon" aria-label="Back to Chat">
                         <Link href="/">
                             <ArrowLeft size={18} />
                         </Link>
