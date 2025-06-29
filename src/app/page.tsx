@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -149,12 +148,12 @@ export default function Home() {
             </h1>
            </div>
           <div className="flex items-center gap-1">
-             <Link href="/settings" passHref legacyBehavior>
-                <Button variant="ghost" size="icon" title="Settings">
+             <Button asChild variant="ghost" size="icon" title="Settings">
+                <Link href="/settings">
                   <Settings size={18} />
                   <span className="sr-only">Settings</span>
-                </Button>
-            </Link>
+                </Link>
+            </Button>
             <ThemeToggle />
           </div>
         </header>

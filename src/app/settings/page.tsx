@@ -373,11 +373,11 @@ export default function SettingsPage() {
         <div className="flex flex-col h-screen bg-background">
             <header className="flex items-center justify-between p-3 border-b sticky top-0 z-10 bg-background">
                 <div className="flex items-center gap-4">
-                    <Link href="/" passHref legacyBehavior>
-                        <Button variant="outline" size="icon" aria-label="Back to Chat">
+                    <Button asChild variant="outline" size="icon" aria-label="Back to Chat">
+                        <Link href="/">
                             <ArrowLeft size={18} />
-                        </Button>
-                    </Link>
+                        </Link>
+                    </Button>
                     <div>
                         <h1 className="text-lg font-semibold">Settings</h1>
                         <p className="text-sm text-muted-foreground">Configure chat behavior, manage models, and set up RAG.</p>
