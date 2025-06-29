@@ -157,7 +157,7 @@ function DirectModelManager({ onModelsUpdate }: { onModelsUpdate: () => void }) 
                 </CardHeader>
                 <CardContent>
                     {isLoading ? ( <div className="flex justify-center items-center h-24"><Loader2 className="animate-spin" /></div> ) : (
-                        <ScrollArea className="h-48 rounded-md border">
+                        <ScrollArea className="rounded-md border">
                             <div className="p-2 space-y-1">
                                 {models.length > 0 ? models.map(model => (
                                     <div key={model.name} className="flex items-center justify-between p-2 rounded hover:bg-muted">
@@ -475,5 +475,3 @@ export function SettingsDialog({
     </Dialog>
   );
 }
-
-    
