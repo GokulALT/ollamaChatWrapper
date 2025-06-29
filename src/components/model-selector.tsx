@@ -37,7 +37,9 @@ export function ModelSelector({ selectedModel, onSelectModel, refreshKey, connec
       setIsLoading(true);
       setError(null);
       try {
-        const response = await fetch(`/api/ollama/models?mode=${connectionMode}`);
+        // RAG mode uses the 'direct' connection to ollama for generation
+        const fetchMode = connectionMode === 'rag' ? 'direct' : connectionMode;
+        const response = await fetch(`/api/ollama/models?mode=${fetchMode}`);
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
           throw new Error(errorData.error || `Failed to fetch: ${response.statusText}`);

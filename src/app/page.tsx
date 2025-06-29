@@ -122,20 +122,19 @@ export default function Home() {
             </Button>
           </div>
           <div className="flex-grow overflow-y-auto">
-            {connectionMode === 'rag' ? (
+            {connectionMode === 'rag' && (
               <CollectionSelector 
                 selectedCollection={selectedCollection} 
                 onSelectCollection={handleSelectCollection} 
                 refreshKey={ragUpdateKey}
               />
-            ) : (
-              <ModelSelector 
-                selectedModel={selectedModel} 
-                onSelectModel={setSelectedModel} 
-                refreshKey={modelRefreshKey} 
-                connectionMode={connectionMode} 
-              />
             )}
+            <ModelSelector 
+              selectedModel={selectedModel} 
+              onSelectModel={setSelectedModel} 
+              refreshKey={modelRefreshKey} 
+              connectionMode={connectionMode} 
+            />
           </div>
         </SidebarContent>
         <SidebarFooter className="p-0 mt-auto">

@@ -51,6 +51,9 @@ export async function POST(req: NextRequest) {
         if (!collectionName) {
             return new Response(JSON.stringify({ error: 'Missing collection name in request body' }), { status: 400 });
         }
+        if (!model) {
+            return new Response(JSON.stringify({ error: 'Missing model in request body' }), { status: 400 });
+        }
         if (!messages || messages.length === 0) {
             return new Response(JSON.stringify({ error: 'Missing messages in request body' }), { status: 400 });
         }

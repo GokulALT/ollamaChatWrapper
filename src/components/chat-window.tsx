@@ -95,7 +95,7 @@ export function ChatWindow({ selectedModel, newChatKey, systemPrompt, connection
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model: selectedModel || 'llama3', // Default to llama3 for RAG if none selected
+          model: selectedModel,
           collection: selectedCollection,
           messages: newMessages.map(m => ({ sender: m.sender, text: m.text })),
           system: systemPrompt,
@@ -136,7 +136,7 @@ export function ChatWindow({ selectedModel, newChatKey, systemPrompt, connection
         if (sources && !aiMessageStarted) {
            setMessages((prev) => [
             ...prev,
-            { id: currentAiMessageId, text: '', sender: 'ai', timestamp: new Date(), model: selectedModel || 'llama3', sources: sources || undefined },
+            { id: currentAiMessageId, text: '', sender: 'ai', timestamp: new Date(), model: selectedModel, sources: sources || undefined },
           ]);
           aiMessageStarted = true;
         }
@@ -148,7 +148,7 @@ export function ChatWindow({ selectedModel, newChatKey, systemPrompt, connection
   };
 
   const sendMessage = async () => {
-    const isRagReady = connectionMode === 'rag' && selectedCollection;
+    const isRagReady = connectionMode === 'rag' && selectedCollection && selectedModel;
     const isDirectReady = connectionMode !== 'rag' && selectedModel;
     if (!input.trim() || isLoading || (!isRagReady && !isDirectReady)) return;
 
@@ -207,14 +207,16 @@ export function ChatWindow({ selectedModel, newChatKey, systemPrompt, connection
   
   const getPlaceholder = () => {
     if (connectionMode === 'rag') {
-      return selectedCollection ? "Ask a question about your documents..." : "Please select a collection first."
+      if (!selectedCollection) return "Please select a collection first."
+      if (!selectedModel) return "Please select a model to continue."
+      return "Ask a question about your documents...";
     }
     return selectedModel ? "Type your message (Shift+Enter for new line)..." : "Please select a model first."
   }
 
   const isChatDisabled = () => {
     if (isLoading) return true;
-    if (connectionMode === 'rag') return !selectedCollection;
+    if (connectionMode === 'rag') return !selectedCollection || !selectedModel;
     return !selectedModel;
   }
 
