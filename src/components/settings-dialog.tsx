@@ -265,7 +265,7 @@ function RagManager({ onRagUpdate }: { onRagUpdate: () => void }) {
             });
             if (!res.ok) {
                 const err = await res.json();
-                throw new Error(err.error);
+                throw new Error(err.error || "An unknown error occurred during upload.");
             }
             const result = await res.json();
             toast({ title: "Upload Successful", description: `${result.count} chunks added to "${selectedCollection}".` });
@@ -329,11 +329,11 @@ function RagManager({ onRagUpdate }: { onRagUpdate: () => void }) {
             <Card>
                 <CardHeader>
                     <CardTitle className="text-base">Upload Document</CardTitle>
-                    <CardDescription>Upload a .txt file to the selected collection to be embedded.</CardDescription>
+                    <CardDescription>Upload a .txt or .docx file to the selected collection to be embedded.</CardDescription>
                 </CardHeader>
                 <CardContent>
                      <form onSubmit={handleFileUpload} className="flex items-center gap-2">
-                        <Input id="file-upload" type="file" accept=".txt" onChange={e => setFile(e.target.files ? e.target.files[0] : null)} disabled={isUploading || !selectedCollection} />
+                        <Input id="file-upload" type="file" accept=".txt,.docx" onChange={e => setFile(e.target.files ? e.target.files[0] : null)} disabled={isUploading || !selectedCollection} />
                         <Button type="submit" size="icon" disabled={isUploading || !file || !selectedCollection}>
                             {isUploading ? <Loader2 className="animate-spin" /> : <Upload size={18} />}
                         </Button>

@@ -1,6 +1,7 @@
 
 import { type NextRequest, NextResponse } from 'next/server';
 import { ChromaClient } from 'chromadb';
+import mammoth from 'mammoth';
 
 // Ollama client for embedding
 class OllamaEmbeddingFunction {
@@ -60,11 +61,22 @@ export async function POST(req: NextRequest) {
         if (!collectionName) {
             return NextResponse.json({ error: 'No collection name provided.' }, { status: 400 });
         }
-        if (file.type !== 'text/plain') {
-            return NextResponse.json({ error: 'Only .txt files are supported.' }, { status: 400 });
+        
+        let text = '';
+        if (file.type === 'text/plain') {
+            text = await file.text();
+        } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+            const arrayBuffer = await file.arrayBuffer();
+            const result = await mammoth.extractRawText({ arrayBuffer });
+            text = result.value;
+        } else {
+             return NextResponse.json({ error: 'Only .txt and .docx files are supported.' }, { status: 400 });
         }
 
-        const text = await file.text();
+        if (!text.trim()) {
+            return NextResponse.json({ error: 'The document appears to be empty.' }, { status: 400 });
+        }
+
         const chunks = await chunkText(text);
 
         const chroma = new ChromaClient({ path: chromaUrl });
