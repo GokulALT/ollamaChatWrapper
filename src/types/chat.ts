@@ -1,8 +1,11 @@
+
 export interface Source {
   id: string;
   pageContent: string;
   metadata: Record<string, any>;
 }
+
+export type ConnectionMode = 'mcp' | 'direct' | 'rag';
 
 export interface ChatMessageData {
   id: string;

@@ -16,11 +16,10 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from "@/hooks/use-toast";
 import { Info, Trash2, Loader2, DownloadCloud, Upload, Database } from 'lucide-react';
-import type { ConnectionMode } from '@/app/page';
+import type { ConnectionMode } from '@/types/chat';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
 
@@ -31,7 +30,6 @@ interface SettingsDialogProps {
   onSystemPromptChange: (prompt: string | null) => void;
   onModelsUpdate: () => void;
   connectionMode: ConnectionMode;
-  onConnectionModeChange: (mode: ConnectionMode) => void;
   onRagUpdate: () => void;
 }
 
@@ -49,7 +47,7 @@ function DirectModelManager({ onModelsUpdate }: { onModelsUpdate: () => void }) 
     const [pullStatus, setPullStatus] = useState('');
     const [deletingModel, setDeletingModel] = useState<string | null>(null);
 
-    const fetchModels = async () => {
+    const fetchModels = useCallback(async () => {
         setIsLoading(true);
         try {
             const res = await fetch('/api/ollama/models?mode=direct');
@@ -62,11 +60,11 @@ function DirectModelManager({ onModelsUpdate }: { onModelsUpdate: () => void }) 
         } finally {
             setIsLoading(false);
         }
-    };
+    }, [toast]);
 
     useEffect(() => {
         fetchModels();
-    }, []);
+    }, [fetchModels]);
 
     const handlePullModel = async (e: FormEvent) => {
         e.preventDefault();
@@ -355,8 +353,7 @@ export function SettingsDialog({
   onSystemPromptChange,
   onModelsUpdate,
   connectionMode,
-  onConnectionModeChange,
-  onRagUpdate
+  onRagUpdate,
 }: SettingsDialogProps) {
   const { toast } = useToast();
   const [currentSystemPrompt, setCurrentSystemPrompt] = useState(systemPrompt || '');
@@ -365,6 +362,17 @@ export function SettingsDialog({
   useEffect(() => {
     setCurrentSystemPrompt(systemPrompt || '');
   }, [systemPrompt]);
+
+  useEffect(() => {
+    // When connectionMode changes, if the active tab is no longer valid,
+    // switch to the default tab for that mode.
+    if (connectionMode === 'rag' && activeTab === 'manage-models') {
+      setActiveTab('rag');
+    }
+    if (connectionMode !== 'rag' && activeTab === 'rag') {
+      setActiveTab('chat-settings');
+    }
+  }, [connectionMode, activeTab]);
 
   const handleSaveSystemPrompt = () => {
     const finalPrompt = currentSystemPrompt.trim();
@@ -380,21 +388,9 @@ export function SettingsDialog({
     });
   };
 
-  const TABS_FOR_MODE: Record<ConnectionMode, string[]> = {
-    'direct': ["chat-settings", "manage-models"],
-    'mcp': ["chat-settings", "manage-models"],
-    'rag': ["chat-settings", "rag"],
-  };
-
-  useEffect(() => {
-    if (!TABS_FOR_MODE[connectionMode].includes(activeTab)) {
-        setActiveTab(TABS_FOR_MODE[connectionMode][0]);
-    }
-  }, [connectionMode, activeTab]);
-
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[650px] grid-rows-[auto_auto_1fr] max-h-[90vh] flex flex-col">
+      <DialogContent className="sm:max-w-[650px] grid-rows-[auto_1fr] max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Settings</DialogTitle>
           <DialogDescription>
@@ -402,36 +398,9 @@ export function SettingsDialog({
           </DialogDescription>
         </DialogHeader>
         
-        <div className="py-4 border-y">
-            <Label>Connection Mode</Label>
-            <RadioGroup value={connectionMode} onValueChange={(val) => onConnectionModeChange(val as ConnectionMode)} className="grid grid-cols-3 gap-2 mt-2">
-                <div className="h-full">
-                    <RadioGroupItem value="direct" id="direct" className="peer sr-only" />
-                    <Label htmlFor="direct" className="flex h-full flex-col items-center justify-center rounded-md border-2 border-muted bg-popover p-3 text-center hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary">
-                        <span className="font-semibold">Direct</span>
-                        <span className="text-xs font-normal text-muted-foreground mt-1">Connect to local Ollama.</span>
-                    </Label>
-                </div>
-                 <div className="h-full">
-                    <RadioGroupItem value="mcp" id="mcp" className="peer sr-only" />
-                    <Label htmlFor="mcp" className="flex h-full flex-col items-center justify-center rounded-md border-2 border-muted bg-popover p-3 text-center hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary">
-                        <span className="font-semibold">MCP Server</span>
-                        <span className="text-xs font-normal text-muted-foreground mt-1">Use tools via MCP server.</span>
-                    </Label>
-                </div>
-                 <div className="h-full">
-                    <RadioGroupItem value="rag" id="rag" className="peer sr-only" />
-                    <Label htmlFor="rag" className="flex h-full flex-col items-center justify-center rounded-md border-2 border-muted bg-popover p-3 text-center hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary">
-                       <span className="font-semibold">RAG</span>
-                       <span className="text-xs font-normal text-muted-foreground mt-1">Chat with your documents.</span>
-                    </Label>
-                </div>
-            </RadioGroup>
-        </div>
-        
-        <div className="flex-grow overflow-hidden">
+        <div className="flex-grow overflow-hidden pt-4">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
-          <TabsList className="grid w-full grid-cols-3 mt-1">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="chat-settings">Chat</TabsTrigger>
             <TabsTrigger value="manage-models" disabled={connectionMode === 'rag'}>Models</TabsTrigger>
             <TabsTrigger value="rag" disabled={connectionMode !== 'rag'}>RAG</TabsTrigger>
