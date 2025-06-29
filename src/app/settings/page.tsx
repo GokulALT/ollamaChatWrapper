@@ -301,7 +301,7 @@ function RagManager() {
                                         <SelectValue placeholder={isLoadingCollections ? "Loading..." : "Select database"} />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {collections.map(c => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
+                                        {collections.map(c => <SelectItem key={c.name} value={c.name}>{c.name}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
                                 <Button variant="destructive" size="icon" onClick={handleDeleteCollection} disabled={isDeleting || !selectedCollection}>
