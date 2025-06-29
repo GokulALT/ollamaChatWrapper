@@ -11,6 +11,7 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
@@ -18,7 +19,7 @@ import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { useToast } from "@/hooks/use-toast";
-import { Info, Trash2, Loader2, DownloadCloud, Upload, Database, CheckCircle2, WifiOff } from 'lucide-react';
+import { Info, Trash2, Loader2, DownloadCloud, Upload, Database } from 'lucide-react';
 import type { ConnectionMode } from '@/app/page';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Alert, AlertDescription, AlertTitle } from './ui/alert';
@@ -135,34 +136,42 @@ function DirectModelManager({ onModelsUpdate }: { onModelsUpdate: () => void }) 
     };
 
     return (
-        <div className="space-y-6">
-            <div>
-                <Label htmlFor="pull-model">Pull a new model</Label>
-                <form onSubmit={handlePullModel} className="flex items-center gap-2 mt-1">
-                    <Input id="pull-model" placeholder="e.g., llama3:8b" value={pullModelName} onChange={e => setPullModelName(e.target.value)} disabled={isPulling} />
-                    <Button type="submit" disabled={isPulling || !pullModelName.trim()}>
-                        {isPulling ? <Loader2 className="animate-spin" /> : <DownloadCloud />}
-                    </Button>
-                </form>
-                {isPulling && <p className="text-sm text-muted-foreground mt-2 animate-pulse">{pullStatus}</p>}
-            </div>
-            <div>
-                <h4 className="text-sm font-medium mb-2">Local Models</h4>
-                {isLoading ? ( <Loader2 className="animate-spin" /> ) : (
-                    <ScrollArea className="h-48 rounded-md border">
-                        <div className="p-2 space-y-1">
-                            {models.length > 0 ? models.map(model => (
-                                <div key={model.name} className="flex items-center justify-between p-2 rounded hover:bg-muted">
-                                    <span className="text-sm truncate">{model.name}</span>
-                                    <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleDeleteModel(model.name)} disabled={!!deletingModel}>
-                                        {deletingModel === model.name ? <Loader2 className="animate-spin" size={16} /> : <Trash2 size={16} />}
-                                    </Button>
-                                </div>
-                            )) : <p className="text-sm text-muted-foreground p-2">No local models found.</p>}
-                        </div>
-                    </ScrollArea>
-                )}
-            </div>
+        <div className="space-y-4">
+            <Card>
+                <CardHeader>
+                    <CardTitle className="text-base">Pull a new model</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <form onSubmit={handlePullModel} className="flex items-center gap-2">
+                        <Input id="pull-model" placeholder="e.g., llama3:8b" value={pullModelName} onChange={e => setPullModelName(e.target.value)} disabled={isPulling} />
+                        <Button type="submit" size="icon" disabled={isPulling || !pullModelName.trim()}>
+                            {isPulling ? <Loader2 className="animate-spin" /> : <DownloadCloud size={18} />}
+                        </Button>
+                    </form>
+                    {isPulling && <p className="text-sm text-muted-foreground mt-2 animate-pulse">{pullStatus}</p>}
+                </CardContent>
+            </Card>
+             <Card>
+                <CardHeader>
+                    <CardTitle className="text-base">Local Models</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    {isLoading ? ( <div className="flex justify-center items-center h-24"><Loader2 className="animate-spin" /></div> ) : (
+                        <ScrollArea className="h-48 rounded-md border">
+                            <div className="p-2 space-y-1">
+                                {models.length > 0 ? models.map(model => (
+                                    <div key={model.name} className="flex items-center justify-between p-2 rounded hover:bg-muted">
+                                        <span className="text-sm truncate">{model.name}</span>
+                                        <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleDeleteModel(model.name)} disabled={!!deletingModel}>
+                                            {deletingModel === model.name ? <Loader2 className="animate-spin" size={16} /> : <Trash2 size={16} />}
+                                        </Button>
+                                    </div>
+                                )) : <p className="text-sm text-muted-foreground p-4 text-center">No local models found.</p>}
+                            </div>
+                        </ScrollArea>
+                    )}
+                </CardContent>
+            </Card>
         </div>
     )
 }
@@ -264,7 +273,6 @@ function RagManager({ onRagUpdate }: { onRagUpdate: () => void }) {
             const result = await res.json();
             toast({ title: "Upload Successful", description: `${result.count} chunks added to "${selectedCollection}".` });
             setFile(null);
-            // clear the file input
             const fileInput = document.getElementById('file-upload') as HTMLInputElement;
             if (fileInput) fileInput.value = '';
         } catch (error: any) {
@@ -275,54 +283,63 @@ function RagManager({ onRagUpdate }: { onRagUpdate: () => void }) {
     };
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-4">
             <Alert>
                 <Database className="h-4 w-4" />
                 <AlertTitle>RAG Mode</AlertTitle>
                 <AlertDescription>
-                   Upload .txt documents to a ChromaDB collection. The AI will use these documents to answer your questions.
-                   Make sure ChromaDB is running on port 8000.
+                   Upload .txt documents to a ChromaDB collection. The AI will use these documents to answer your questions. Make sure ChromaDB is running on port 8000.
                 </AlertDescription>
             </Alert>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <Label htmlFor="new-collection">New Collection</Label>
-                <form onSubmit={handleCreateCollection} className="flex items-center gap-2">
-                    <Input id="new-collection" placeholder="my-document-set" value={newCollectionName} onChange={e => setNewCollectionName(e.target.value)} disabled={isCreating} />
-                    <Button type="submit" disabled={isCreating || !newCollectionName.trim()}>
-                        {isCreating ? <Loader2 className="animate-spin" /> : "Create"}
-                    </Button>
-                </form>
-              </div>
-              <div className="space-y-1">
-                <Label>Manage Collection</Label>
-                 <div className="flex items-center gap-2">
-                    <Select value={selectedCollection} onValueChange={setSelectedCollection} disabled={isLoadingCollections || isDeleting}>
-                        <SelectTrigger>
-                            <SelectValue placeholder={isLoadingCollections ? "Loading..." : "Select collection"} />
-                        </SelectTrigger>
-                        <SelectContent>
-                            {collections.map(c => <SelectItem key={c.name} value={c.name}>{c.name}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                     <Button variant="destructive" size="icon" onClick={handleDeleteCollection} disabled={isDeleting || !selectedCollection}>
-                         {isDeleting ? <Loader2 className="animate-spin" size={16} /> : <Trash2 size={16} />}
-                    </Button>
-                 </div>
-              </div>
-            </div>
-            
-            <div>
-                <Label htmlFor="file-upload">Upload Document (.txt)</Label>
-                <form onSubmit={handleFileUpload} className="flex items-center gap-2 mt-1">
-                     <Input id="file-upload" type="file" accept=".txt" onChange={e => setFile(e.target.files ? e.target.files[0] : null)} disabled={isUploading || !selectedCollection} />
-                     <Button type="submit" disabled={isUploading || !file || !selectedCollection}>
-                        {isUploading ? <Loader2 className="animate-spin" /> : <Upload />}
-                    </Button>
-                </form>
-                {!selectedCollection && <p className="text-xs text-muted-foreground mt-1">Select a collection to enable upload.</p>}
-            </div>
+            <Card>
+                <CardHeader>
+                    <CardTitle className="text-base">Manage Collections</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="space-y-1.5">
+                            <Label htmlFor="new-collection">Create Collection</Label>
+                            <form onSubmit={handleCreateCollection} className="flex items-center gap-2">
+                                <Input id="new-collection" placeholder="my-doc-set" value={newCollectionName} onChange={e => setNewCollectionName(e.target.value)} disabled={isCreating} />
+                                <Button type="submit" disabled={isCreating || !newCollectionName.trim()}>
+                                    {isCreating ? <Loader2 className="animate-spin" /> : "Create"}
+                                </Button>
+                            </form>
+                        </div>
+                        <div className="space-y-1.5">
+                            <Label>Delete Collection</Label>
+                            <div className="flex items-center gap-2">
+                                <Select value={selectedCollection} onValueChange={setSelectedCollection} disabled={isLoadingCollections || isDeleting}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder={isLoadingCollections ? "Loading..." : "Select collection"} />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {collections.map(c => <SelectItem key={c.name} value={c.name}>{c.name}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                                <Button variant="destructive" size="icon" onClick={handleDeleteCollection} disabled={isDeleting || !selectedCollection}>
+                                    {isDeleting ? <Loader2 className="animate-spin" size={16} /> : <Trash2 size={16} />}
+                                </Button>
+                            </div>
+                        </div>
+                    </div>
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader>
+                    <CardTitle className="text-base">Upload Document</CardTitle>
+                    <CardDescription>Upload a .txt file to the selected collection to be embedded.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                     <form onSubmit={handleFileUpload} className="flex items-center gap-2">
+                        <Input id="file-upload" type="file" accept=".txt" onChange={e => setFile(e.target.files ? e.target.files[0] : null)} disabled={isUploading || !selectedCollection} />
+                        <Button type="submit" size="icon" disabled={isUploading || !file || !selectedCollection}>
+                            {isUploading ? <Loader2 className="animate-spin" /> : <Upload size={18} />}
+                        </Button>
+                    </form>
+                    {!selectedCollection && <p className="text-xs text-muted-foreground mt-2">Select or create a collection to enable upload.</p>}
+                </CardContent>
+            </Card>
         </div>
     );
 }
@@ -366,7 +383,6 @@ export function SettingsDialog({
   };
 
   useEffect(() => {
-    // If the current tab doesn't exist for the new mode, switch to the first available tab
     if (!TABS_FOR_MODE[connectionMode].includes(activeTab)) {
         setActiveTab(TABS_FOR_MODE[connectionMode][0]);
     }
@@ -374,36 +390,36 @@ export function SettingsDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] grid-rows-[auto_auto_1fr] max-h-[90vh] flex flex-col">
+      <DialogContent className="sm:max-w-[650px] grid-rows-[auto_auto_1fr] max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>Settings</DialogTitle>
           <DialogDescription>
-            Configure chat settings, manage models, and set up RAG.
+            Configure chat behavior, manage models, and set up your RAG system.
           </DialogDescription>
         </DialogHeader>
         
-        <div className="py-4 border-b">
+        <div className="py-4 border-y">
             <Label>Connection Mode</Label>
-            <RadioGroup value={connectionMode} onValueChange={(val) => onConnectionModeChange(val as ConnectionMode)} className="grid grid-cols-3 gap-4 mt-2">
-                <div>
+            <RadioGroup value={connectionMode} onValueChange={(val) => onConnectionModeChange(val as ConnectionMode)} className="grid grid-cols-3 gap-2 mt-2">
+                <div className="h-full">
                     <RadioGroupItem value="direct" id="direct" className="peer sr-only" />
-                    <Label htmlFor="direct" className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary">
-                        Direct
-                        <span className="text-xs text-muted-foreground font-normal mt-1 text-center">Connect to a local Ollama instance.</span>
+                    <Label htmlFor="direct" className="flex h-full flex-col items-center justify-center rounded-md border-2 border-muted bg-popover p-3 text-center hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary">
+                        <span className="font-semibold">Direct</span>
+                        <span className="text-xs font-normal text-muted-foreground mt-1">Connect to local Ollama.</span>
                     </Label>
                 </div>
-                 <div>
+                 <div className="h-full">
                     <RadioGroupItem value="mcp" id="mcp" className="peer sr-only" />
-                    <Label htmlFor="mcp" className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary">
-                        MCP Server
-                        <span className="text-xs text-muted-foreground font-normal mt-1 text-center">Connect to a Model Context Protocol server.</span>
+                    <Label htmlFor="mcp" className="flex h-full flex-col items-center justify-center rounded-md border-2 border-muted bg-popover p-3 text-center hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary">
+                        <span className="font-semibold">MCP Server</span>
+                        <span className="text-xs font-normal text-muted-foreground mt-1">Use tools via MCP server.</span>
                     </Label>
                 </div>
-                 <div>
+                 <div className="h-full">
                     <RadioGroupItem value="rag" id="rag" className="peer sr-only" />
-                    <Label htmlFor="rag" className="flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary">
-                        RAG
-                        <span className="text-xs text-muted-foreground font-normal mt-1 text-center">Chat with your own documents via ChromaDB.</span>
+                    <Label htmlFor="rag" className="flex h-full flex-col items-center justify-center rounded-md border-2 border-muted bg-popover p-3 text-center hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary">
+                       <span className="font-semibold">RAG</span>
+                       <span className="text-xs font-normal text-muted-foreground mt-1">Chat with your documents.</span>
                     </Label>
                 </div>
             </RadioGroup>
@@ -411,14 +427,14 @@ export function SettingsDialog({
         
         <div className="flex-grow overflow-hidden">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col h-full">
-          <TabsList className="grid w-full grid-cols-3 mt-4">
-            <TabsTrigger value="chat-settings">Chat Settings</TabsTrigger>
-            <TabsTrigger value="manage-models" disabled={connectionMode === 'rag'}>Manage Models</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-3 mt-1">
+            <TabsTrigger value="chat-settings">Chat</TabsTrigger>
+            <TabsTrigger value="manage-models" disabled={connectionMode === 'rag'}>Models</TabsTrigger>
             <TabsTrigger value="rag" disabled={connectionMode !== 'rag'}>RAG</TabsTrigger>
           </TabsList>
           
           <TabsContent value="chat-settings" className="flex-grow flex flex-col gap-4 py-4 overflow-y-auto">
-            <div className="space-y-2 flex-grow flex flex-col">
+            <div className="space-y-2 flex-grow flex flex-col px-1">
               <Label htmlFor="system-prompt">System Prompt</Label>
               <Textarea
                 id="system-prompt"
@@ -428,7 +444,7 @@ export function SettingsDialog({
                 className="flex-grow text-sm min-h-[150px]"
               />
               <p className="text-sm text-muted-foreground">
-                The system prompt sets the AI's behavior. (In RAG mode, a default prompt is used to focus on context).
+                Sets the AI's behavior. In RAG mode, a default prompt is used to focus on context.
               </p>
             </div>
             <DialogFooter className="mt-auto pt-4">
@@ -436,7 +452,7 @@ export function SettingsDialog({
             </DialogFooter>
           </TabsContent>
 
-          <TabsContent value="manage-models" className="flex-grow flex flex-col gap-4 py-4 overflow-y-auto">
+          <TabsContent value="manage-models" className="flex-grow flex flex-col gap-4 py-4 overflow-y-auto px-1">
              {connectionMode === 'mcp' ? (
                 <div className="flex flex-col items-center justify-center h-full text-center bg-muted/50 rounded-lg p-6">
                     <Info className="w-10 h-10 mb-4 text-muted-foreground" />
@@ -450,7 +466,7 @@ export function SettingsDialog({
              )}
           </TabsContent>
 
-          <TabsContent value="rag" className="flex-grow flex flex-col gap-4 py-4 overflow-y-auto">
+          <TabsContent value="rag" className="flex-grow flex flex-col gap-4 py-4 overflow-y-auto px-1">
               <RagManager onRagUpdate={onRagUpdate} />
           </TabsContent>
         </Tabs>
@@ -459,3 +475,5 @@ export function SettingsDialog({
     </Dialog>
   );
 }
+
+    
