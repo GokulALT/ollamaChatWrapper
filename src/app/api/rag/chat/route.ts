@@ -106,11 +106,17 @@ ${contextText}
         
         const ragSystemPrompt = system ? `${system}\n\n${baseRagPrompt}` : baseRagPrompt;
 
-        // Map messages to the format Ollama expects, including conversation history
-        const apiMessages = messages.map(msg => ({
+        // Map messages to the format Ollama expects
+        const userMessages = messages.map(msg => ({
             role: msg.sender === 'ai' ? 'assistant' : 'user',
             content: msg.text,
         }));
+
+        // Prepend the system prompt to the message history. This is more reliable than using the `options` field.
+        const apiMessages = [
+            { role: 'system', content: ragSystemPrompt },
+            ...userMessages
+        ];
 
         // 3. Call Ollama to generate a response
         const apiResponse = await fetch(`${ollamaBaseUrl}/api/chat`, {
@@ -120,7 +126,6 @@ ${contextText}
                 model: model,
                 messages: apiMessages,
                 stream: true,
-                options: { system: ragSystemPrompt },
             }),
         });
 
