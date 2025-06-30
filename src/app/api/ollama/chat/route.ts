@@ -98,7 +98,7 @@ export async function POST(req: NextRequest) {
       content: msg.text,
     }));
 
-    if (system && system.trim()) {
+    if (system && system.trim() && connectionMode === 'mcp') {
       apiMessages.unshift({ role: 'system', content: system });
     }
 
@@ -117,7 +117,10 @@ export async function POST(req: NextRequest) {
     } else { // Direct Mode
       apiEndpoint = `${ollamaBaseUrl}/api/chat`;
       // Direct Ollama uses a different body structure
-      const directMessages = messages.map(m => ({ role: m.sender, content: m.text }));
+      const directMessages = messages.map(m => ({
+        role: m.sender === 'ai' ? 'assistant' : 'user',
+        content: m.text
+      }));
       requestBody = {
         model: model,
         messages: directMessages,

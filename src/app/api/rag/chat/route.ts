@@ -96,11 +96,21 @@ export async function POST(req: NextRequest) {
         
         const contextText = contextDocs.map(d => d.pageContent).join('\n---\n');
 
-        // 2. Construct prompt for the LLM
-        const ragSystemPrompt = system || `You are an expert question-answering assistant. Use the following retrieved context to answer the user's question. If the context doesn't contain the answer, state that you don't know. Do not use any other information.
+        // 2. Construct prompt for the LLM, combining user's system prompt with RAG context
+        const baseRagPrompt = `You are an expert question-answering assistant. Use the following retrieved context to answer the user's question. If the context doesn't contain the answer, state that you don't know. Do not use any other information.
 
-Context:
-${contextText}`;
+---
+CONTEXT:
+${contextText}
+---`;
+        
+        const ragSystemPrompt = system ? `${system}\n\n${baseRagPrompt}` : baseRagPrompt;
+
+        // Map messages to the format Ollama expects, including conversation history
+        const apiMessages = messages.map(msg => ({
+            role: msg.sender === 'ai' ? 'assistant' : 'user',
+            content: msg.text,
+        }));
 
         // 3. Call Ollama to generate a response
         const apiResponse = await fetch(`${ollamaBaseUrl}/api/chat`, {
@@ -108,7 +118,7 @@ ${contextText}`;
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 model: model,
-                messages: [{ role: 'user', content: latestQuery }],
+                messages: apiMessages,
                 stream: true,
                 options: { system: ragSystemPrompt },
             }),
