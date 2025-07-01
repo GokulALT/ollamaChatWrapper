@@ -5,7 +5,6 @@ This folder contains a robust example of a Model Context Protocol (MCP) **tool s
 It has been configured to run as a managed process that communicates over **stdio** (standard input/output). This means it does **not** open an HTTP port. Instead, it's designed to be launched and managed by a primary MCP host server (like the pre-built `mcp-server` executable).
 
 This server is pre-configured to provide:
-- Access to a local Ollama instance for language models.
 - A simple `echo` tool.
 - A powerful `filesystem` tool for local file operations.
 
@@ -13,7 +12,6 @@ This server is pre-configured to provide:
 
 - **Node.js**: You'll need Node.js (v18 or later) installed.
 - **npm**: Comes with Node.js.
-- **Ollama**: You must have [Ollama](https://ollama.com/) running.
 - **MCP Server Executable**: You need the [pre-built `mcp-server`](https://github.com/model-context-protocol/mcp/releases) executable to act as the host.
 
 ## How to Run This Tool Server

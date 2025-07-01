@@ -1,4 +1,4 @@
-import { McpServer, OllamaProvider, StdioServerTransport } from '@model-context-protocol/server';
+import { McpServer, StdioServerTransport } from '@model-context-protocol/server';
 import { echoTool } from './tools/echo';
 import { filesystemTool } from './tools/filesystem';
 
@@ -19,19 +19,7 @@ class ChatStudioMcpToolServer {
       transport: new StdioServerTransport(),
     });
 
-    this.addProviders();
     this.addTools();
-  }
-
-  /**
-   * Registers the model providers that the server will use.
-   * This example adds an Ollama provider, which automatically connects
-   * to a running Ollama instance.
-   */
-  private addProviders(): void {
-    const ollamaProvider = new OllamaProvider();
-    this.server.addProvider(ollamaProvider);
-    console.log('Ollama provider added.');
   }
 
   /**
