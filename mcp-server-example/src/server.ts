@@ -1,20 +1,22 @@
-import { McpServer, OllamaProvider } from '@model-context-protocol/server';
+import { McpServer, OllamaProvider, StdioServerTransport } from '@model-context-protocol/server';
 import { echoTool } from './tools/echo';
 import { filesystemTool } from './tools/filesystem';
 
 /**
- * A robust, class-based implementation of an MCP server for Chat Studio.
- * This structure makes it easier to manage providers and tools as the
- * server grows in complexity.
+ * An MCP server configured to run as a "tool" process.
+ * Instead of listening on an HTTP port, it uses StdioServerTransport
+ * to communicate with a parent MCP host process over standard I/O.
+ * This is an efficient way to orchestrate local, custom-built tool servers.
  */
-class ChatStudioMcpServer {
+class ChatStudioMcpToolServer {
   private readonly server: McpServer;
-  private readonly port: number;
 
-  constructor(port: number) {
-    this.port = port;
+  constructor() {
     this.server = new McpServer({
-      // Optional: Add server-level configuration here
+      // Use StdioServerTransport for local process communication.
+      // This tells the server to listen for requests on stdin and
+      // send responses on stdout, instead of opening an HTTP port.
+      transport: new StdioServerTransport(),
     });
 
     this.addProviders();
@@ -47,24 +49,23 @@ class ChatStudioMcpServer {
   }
 
   /**
-   * Starts the MCP server and listens for incoming connections.
+   * Starts the MCP server and begins listening for requests over stdio.
    */
   public async start(): Promise<void> {
     try {
-      await this.server.start(this.port);
-      console.log(`MCP Server started successfully on http://localhost:${this.port}`);
-      console.log('The server is now ready to accept connections from Chat Studio.');
-      console.log('Available Models and Tools will be dynamically loaded from this server.');
+      // The start() method requires no arguments when using Stdio transport.
+      await this.server.start();
+      console.log('MCP Tool Server started successfully using stdio transport.');
+      console.log('This server is now ready to be orchestrated by a parent MCP host.');
     } catch (error) {
-      console.error('Failed to start MCP server:', error);
+      console.error('Failed to start MCP server with stdio:', error);
       process.exit(1);
     }
   }
 }
 
-// --- Configuration & Initialization ---
-const PORT = 8008; // The port the MCP server will listen on
-const mcpServer = new ChatStudioMcpServer(PORT);
+// --- Initialization ---
+const mcpServer = new ChatStudioMcpToolServer();
 
 // Start the server
 mcpServer.start();

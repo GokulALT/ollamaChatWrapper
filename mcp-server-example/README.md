@@ -1,138 +1,71 @@
-# Example MCP Server (TypeScript)
+# Example MCP Tool Server (TypeScript)
 
-This folder contains a robust, example Model Context Protocol (MCP) server built using the official [`@model-context-protocol/server` TypeScript SDK](https://github.com/model-context-protocol/typescript-sdk). It's designed to be a fast and reliable starting point for creating your own custom MCP servers and integrating tools **within a Node.js environment**.
+This folder contains a robust example of a Model Context Protocol (MCP) **tool server** built using the official [`@model-context-protocol/server`](https://github.com/model-context-protocol/typescript-sdk) TypeScript SDK.
 
-This server is pre-configured to:
-- Connect to a local Ollama instance to provide language models.
-- Include a simple `echo` tool as a basic example.
-- Include a powerful `filesystem` tool to read, write, and list local files, demonstrating how to build tools directly in TypeScript.
+It has been configured to run as a managed process that communicates over **stdio** (standard input/output). This means it does **not** open an HTTP port. Instead, it's designed to be launched and managed by a primary MCP host server (like the pre-built `mcp-server` executable).
+
+This server is pre-configured to provide:
+- Access to a local Ollama instance for language models.
+- A simple `echo` tool.
+- A powerful `filesystem` tool for local file operations.
 
 ## Prerequisites
 
-1.  **Node.js**: You'll need Node.js (v18 or later) installed.
-2.  **npm**: Comes with Node.js.
-3.  **Ollama**: You must have [Ollama](https://ollama.com/) installed and running with at least one model (e.g., `ollama run llama3`). The server will connect to it automatically.
+- **Node.js**: You'll need Node.js (v18 or later) installed.
+- **npm**: Comes with Node.js.
+- **Ollama**: You must have [Ollama](https://ollama.com/) running.
+- **MCP Server Executable**: You need the [pre-built `mcp-server`](https://github.com/model-context-protocol/mcp/releases) executable to act as the host.
 
-## Setup and Running
+## How to Run This Tool Server
 
-1.  **Navigate to this directory**:
-    ```bash
-    cd mcp-server-example
-    ```
+You do **not** run this server directly and connect to it from Chat Studio. Instead, you configure your main `mcp-server` executable to run it for you.
 
-2.  **Install dependencies**:
-    ```bash
-    npm install
-    ```
+### 1. Install Dependencies
 
-3.  **Run the server**:
-    ```bash
-    npm start
-    ```
-
-If successful, you will see a message like `MCP Server started successfully on http://localhost:8008`. You can now go back to the Chat Studio application, set the Connection Mode to "MCP Server", and start chatting. The `filesystem` tool will be available.
-
-## Configuration
-
-Unlike the pre-built MCP server executables that use an `mcp_config.json` file to manage external processes, this TypeScript-based server is **configured directly within the code**. All settings, including the port, model providers, and tools, are managed in `src/server.ts`.
-
-This "in-process" approach offers greater flexibility and type safety when building a self-contained server in Node.js. To make changes:
--   **Port**: Modify the `PORT` constant at the bottom of `src/server.ts`.
--   **Providers**: Add or remove providers in the `addProviders()` method.
--   **Tools**: Add or remove tools in the `addTools()` method (as shown in the guide below).
-
-If you need to orchestrate tools written in other languages (like Python) or other standalone executables, you should use the pre-built `mcp-server` and an `mcp_config.json` file, as described in the main project README.
-
-## How to Add a New Tool
-
-The real power of MCP comes from adding your own tools. This server includes a `filesystem` tool as a powerful, real-world example of building a tool directly in TypeScript. You can use it as a guide for your own tools.
-
-### Step 1: Create the Tool File
-
-A new file was created at `src/tools/filesystem.ts`.
-
-### Step 2: Define the Tool Logic
-
-In `src/tools/filesystem.ts`, we use Node.js's built-in `fs/promises` and `path` modules to interact with the file system.
-
-```typescript
-// src/tools/filesystem.ts (Simplified)
-
-import { Tool } from '@model-context-protocol/server';
-import fs from 'fs/promises';
-import path from 'path';
-
-// Define the schema for the tool's input.
-const FilesystemInputSchema = {
-  type: 'object' as const,
-  properties: {
-    operation: { type: 'string' as const, enum: ['readFile', 'writeFile', 'listFiles'] },
-    path: { type: 'string' as const, description: 'The path to the file or directory.' },
-    // ... other properties
-  },
-  required: ['operation', 'path'],
-};
-
-// Define the schema for the tool's output.
-const FilesystemOutputSchema = {
-  // ... schema definition
-};
-
-// Create the tool instance.
-export const filesystemTool = new Tool({
-  name: 'filesystem',
-  description: 'Performs file system operations like reading, writing, and listing files.',
-  inputSchema: FilesystemInputSchema,
-  outputSchema: FilesystemOutputSchema,
-
-  // The core logic of the tool.
-  async execute(input: { operation: string, path: string, content?: string }) {
-    // IMPORTANT: Security checks are included to prevent path traversal attacks.
-    // ...
-    
-    // Logic to handle readFile, writeFile, and listFiles
-    // ...
-    
-    return { /* result */ };
-  },
-});
+First, navigate to this directory and install its Node.js dependencies:
+```bash
+cd mcp-server-example
+npm install
 ```
 
-### Step 3: Register the Tool with the Server
+### 2. Configure the Main MCP Host
 
-In `src/server.ts`, the new tool is imported and registered with the server instance.
+Next, create or edit an `mcp_config.json` file for your main `mcp-server` executable. Add an entry in the `tools` array to tell the host how to run this server.
 
-```typescript
-// src/server.ts (updated)
-import { McpServer, OllamaProvider } from '@model-context-protocol/server';
-import { echoTool } from './tools/echo';
-import { filesystemTool } from './tools/filesystem'; // <-- 1. Import the new tool
-
-class ChatStudioMcpServer {
-  // ... constructor and other methods
-
-  private addTools(): void {
-    this.server.addTool(echoTool);
-    console.log(`Tool added: ${echoTool.spec.name}`);
-    
-    // Register the filesystem tool
-    this.server.addTool(filesystemTool); // <-- 2. Register the tool
-    console.log(`Tool added: ${filesystemTool.spec.name}`);
-  }
-
-  // ... other methods
+Here is an example `mcp_config.json` entry:
+```json
+{
+  "listen": "localhost:8008",
+  "providers": [
+    {
+      "path": "./provider-ollama.exe",
+      "listen": "tcp"
+    }
+  ],
+  "tools": [
+    {
+      "name": "custom-ts-server",
+      "command": "npm",
+      "args": ["start"],
+      "listen": "stdio",
+      "cwd": "./mcp-server-example"
+    }
+  ]
 }
+```
+**Key Configuration Details:**
+-   `"name"`: A name for your tool server, e.g., `custom-ts-server`. The tools it exposes (`filesystem`, `echo`) will be available under this scope.
+-   `"command"`: The command to run. We use `npm`.
+-   `"args"`: The arguments for the command. `["start"]` will execute the `npm start` script from this folder's `package.json`.
+-   `"listen": "stdio"`: This is the crucial part. It tells the host to communicate with this process using stdin/stdout, not a network port.
+-   `"cwd"`: The working directory from which to run the command. This should point to the `mcp-server-example` directory.
 
-// ... Initialization code
+### 3. Run the Main MCP Host
+
+Finally, run your main `mcp-server` from the directory containing your config file:
+
+```bash
+./mcp-server --config mcp_config.json
 ```
 
-### Step 4: Restart and Use the Filesystem Tool
-
-1.  Stop the server if it's running (`Ctrl+C`).
-2.  Restart it with `npm start`.
-3.  Go to the Chat Studio application. In the sidebar, you should now see `filesystem` listed under "Available Tools".
-4.  Select a model and try a prompt that uses the tool, for example:
-
-    `Using the filesystem tool, list all files in the current directory.`
-
-The language model should understand the request, use your `filesystem` tool, and give you the correct output. You can also ask it to read from or write to files.
+The host server will start, launch this TypeScript tool server as a child process, and make its tools available to any connected client, like Chat Studio.
