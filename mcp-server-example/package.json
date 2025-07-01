@@ -1,7 +1,7 @@
 {
   "name": "mcp-server-example",
   "version": "1.0.0",
-  "description": "An example of a custom MCP tool server built with the TypeScript SDK. It provides filesystem and echo tools and communicates over stdio.",
+  "description": "A standalone MCP server that connects to Ollama and provides filesystem and echo tools.",
   "main": "src/server.ts",
   "scripts": {
     "start": "ts-node src/server.ts",

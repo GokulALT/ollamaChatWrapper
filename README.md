@@ -70,72 +70,22 @@ In essence, MCP acts as a bridge, connecting AI models to the vast resources ava
 
 Chat Studio is an MCP Client. To use its full potential (including tools), you'll need to run an MCP server locally. This server acts as a bridge between Chat Studio and your models/tools.
 
-You have two main options for running an MCP server:
+The easiest way to get started is by using the **included TypeScript example server**.
 
-### Option 1: Use the Pre-built Executables (Recommended for External Tools)
+### Use the Included TypeScript Example Server (Recommended)
 
-This is the best approach if you want to **orchestrate multiple, separate tool processes**, especially if they are written in different languages (like Python) or are standalone executables. This method uses an `mcp_config.json` file to manage everything.
+This project includes a ready-to-run, all-in-one MCP server in the `mcp-server-example` folder. It's the perfect starting point and is configured to:
+- Connect to your local **Ollama** instance.
+- Provide a `filesystem` tool for interacting with your local files.
+- Run on its own without needing any external configuration files.
 
-For detailed instructions, always refer to the [official MCP Quickstart](https://modelcontextprotocol.io/quickstart/user).
+For detailed instructions, please see the [**README in that folder**](./mcp-server-example/README.md).
 
-#### 1. Download MCP Components
+### (Advanced) Use Pre-built Executables
 
-You'll need at least two executables from the [MCP Releases page on GitHub](https://github.com/model-context-protocol/mcp/releases):
+For advanced use cases, such as orchestrating multiple tool processes written in different languages (like Python), you can use the pre-built `mcp-server` executable. This method uses an `mcp_config.json` file to manage everything.
 
-*   **The MCP Server**: The core engine that reads your config file (e.g., `mcp-server.exe` on Windows).
-*   **A Model Provider**: Connects to your language models (e.g., `provider-ollama.exe`).
-*   **(Optional) Tools**: To add capabilities, download or create tool servers like `server-filesystem.exe` or your own Python scripts.
-
-Download the latest executables for your operating system and place them all in the **same directory**.
-
-#### 2. Create a Configuration File
-
-In the same directory, create a file named `mcp_config.json`. This file tells the MCP server which models and tools to launch and manage.
-
-Here is a sample configuration that enables the Ollama provider and the filesystem tool:
-
-```json
-{
-  "listen": "localhost:8008",
-  "providers": [
-    {
-      "path": "./provider-ollama",
-      "listen": "tcp"
-    }
-  ],
-  "tools": [
-    {
-      "name": "filesystem",
-      "path": "./server-filesystem",
-      "listen": "tcp"
-    }
-  ]
-}
-```
-*Note: On Windows, you might need to add the `.exe` extension to the paths (e.g., `"./provider-ollama.exe"`).*
-
-#### 3. Run the MCP Server
-
-Open a terminal or command prompt, navigate to your directory, and run the server:
-
-```bash
-# On Linux/macOS
-./mcp-server --config mcp_config.json
-
-# On Windows
-./mcp-server.exe --config mcp_config.json
-```
-
-If successful, you'll see log messages indicating the server is running on `localhost:8008`.
-
-### Option 2: Use the Included TypeScript Example Server (For Custom, In-Process Tools)
-
-This project includes a ready-to-run example server in the `mcp-server-example` folder. It's a great starting point if you want to build your own tools **directly within a Node.js environment using TypeScript**.
-
--   **No `mcp_config.json`**: This server is configured programmatically inside `src/server.ts`.
--   **In-Process Tools**: Tools like `filesystem` are built with Node.js and run inside the same process as the server.
-
-See the [**README in that folder**](./mcp-server-example/README.md) for setup instructions.
+For detailed instructions on this approach, please refer to the [official MCP Quickstart](https://modelcontextprotocol.io/quickstart/user).
 
 ## Getting Started with Chat Studio
 
