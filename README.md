@@ -181,6 +181,58 @@ In addition to the standard chat modes, Chat Studio includes a powerful RAG mode
 3.  **Retrieve**: When you ask a question, the app embeds your query and searches ChromaDB for the most relevant chunks of text from your documents.
 4.  **Generate**: This retrieved context is then passed to your selected language model along with your question, allowing the AI to generate an answer based on the content of your documents.
 
+### RAG Data Flow Diagram
+
+Here is a more detailed breakdown of the RAG system's architecture.
+
+**Part 1: Document Ingestion**
+```
+[User] --(Uploads file.txt)--> [Chat Studio UI]
+   |
+   v
+[Next.js API: /api/rag/upload]
+   |
+   +--> 1. Extract Text from file
+   |
+   +--> 2. Chunk Text into pieces
+   |
+   +--> 3. For each chunk:
+   |      |
+   |      '-- (Request Embedding) --> [Ollama: nomic-embed-text]
+   |                                      |
+   |      '<-----------------------------'  (Receive Vector)
+   |
+   +--> 4. Store (Vector + Text Chunk) --> [ChromaDB]
+```
+
+**Part 2: Query and Generation**
+```
+[User] --(Asks "What is X?")--> [Chat Studio UI]
+   |
+   v
+[Next.js API: /api/rag/chat]
+   |
+   +--> 1. Embed User's Question
+   |      |
+   |      '-- (Request Embedding) --> [Ollama: nomic-embed-text]
+   |                                      |
+   |      '<-----------------------------'  (Receive Query Vector)
+   |
+   +--> 2. Query ChromaDB with Vector --> [ChromaDB]
+   |                                        |
+   |      '<-------------------------------'  (Receive Relevant Context Chunks)
+   |
+   +--> 3. Construct Final Prompt:
+   |      (System Instructions + Context Chunks + Conversation History)
+   |
+   +--> 4. Send Final Prompt --> [Ollama: LLM (e.g., llama3)]
+   |                                |
+   |      '<-----------------------'  (Receive AI-generated Answer)
+   |
+   v
+[Chat Studio UI] --(Displays Answer & Sources)--> [User]
+```
+
 ### Prerequisites for RAG
 
 For RAG mode to function, you need to have **ChromaDB** running locally, in addition to Ollama. The easiest way to run ChromaDB is with Docker.
