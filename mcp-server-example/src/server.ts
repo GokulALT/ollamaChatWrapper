@@ -1,5 +1,6 @@
 import { McpServer, OllamaProvider } from '@model-context-protocol/server';
 import { echoTool } from './tools/echo';
+import { filesystemTool } from './tools/filesystem';
 
 /**
  * A robust, class-based implementation of an MCP server for Chat Studio.
@@ -40,11 +41,9 @@ class ChatStudioMcpServer {
     this.server.addTool(echoTool);
     console.log(`Tool added: ${echoTool.spec.name}`);
     
-    // See the README.md for a detailed guide on adding a new 'calculator' tool.
-    // Example:
-    // import { calculatorTool } from './tools/calculator';
-    // this.server.addTool(calculatorTool);
-    // console.log(`Tool added: ${calculatorTool.spec.name}`);
+    // Add the powerful filesystem tool
+    this.server.addTool(filesystemTool);
+    console.log(`Tool added: ${filesystemTool.spec.name}`);
   }
 
   /**

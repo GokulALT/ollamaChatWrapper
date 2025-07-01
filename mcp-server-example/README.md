@@ -4,7 +4,8 @@ This folder contains a robust, example Model Context Protocol (MCP) server built
 
 This server is pre-configured to:
 - Connect to a local Ollama instance to provide language models.
-- Include a simple `echo` tool as an example.
+- Include a simple `echo` tool as a basic example.
+- Include a powerful `filesystem` tool to read, write, and list local files.
 
 ## Prerequisites
 
@@ -29,7 +30,7 @@ This server is pre-configured to:
     npm start
     ```
 
-If successful, you will see a message like `MCP Server started successfully on http://localhost:8008`. You can now go back to the Chat Studio application, set the Connection Mode to "MCP Server", and start chatting.
+If successful, you will see a message like `MCP Server started successfully on http://localhost:8008`. You can now go back to the Chat Studio application, set the Connection Mode to "MCP Server", and start chatting. The `filesystem` tool will be available.
 
 ## Configuration
 
@@ -42,126 +43,94 @@ This approach offers greater flexibility and type safety. To make changes:
 
 ## How to Add a New Tool
 
-The real power of MCP comes from adding your own tools. Here’s a step-by-step guide to adding a new `calculator` tool.
+The real power of MCP comes from adding your own tools. This server includes a `filesystem` tool as a powerful, real-world example. Here’s a breakdown of how it was built, which you can use as a guide for your own tools.
 
 ### Step 1: Create the Tool File
 
-Create a new file inside the `src/tools/` directory. For this example, let's call it `calculator.ts`.
+A new file was created at `src/tools/filesystem.ts`.
 
 ### Step 2: Define the Tool Logic
 
-Open `src/tools/calculator.ts` and add the following code. We'll define the tool's specification, what input it expects (the schema), and the `execute` function that contains the tool's logic.
+In `src/tools/filesystem.ts`, we use Node.js's built-in `fs/promises` and `path` modules to interact with the file system.
 
 ```typescript
-// src/tools/calculator.ts
+// src/tools/filesystem.ts (Simplified)
 
 import { Tool } from '@model-context-protocol/server';
+import fs from 'fs/promises';
+import path from 'path';
 
-// Define the schema for the tool's input using JSON Schema format.
-const CalculatorInputSchema = {
+// Define the schema for the tool's input.
+const FilesystemInputSchema = {
   type: 'object' as const,
   properties: {
-    operation: { type: 'string' as const, enum: ['add', 'subtract', 'multiply', 'divide'] },
-    a: { type: 'number' as const },
-    b: { type: 'number' as const },
+    operation: { type: 'string' as const, enum: ['readFile', 'writeFile', 'listFiles'] },
+    path: { type: 'string' as const, description: 'The path to the file or directory.' },
+    // ... other properties
   },
-  required: ['operation', 'a', 'b'],
+  required: ['operation', 'path'],
 };
 
 // Define the schema for the tool's output.
-const CalculatorOutputSchema = {
-  type: 'object' as const,
-  properties: {
-    result: { type: 'number' as const },
-  },
-  required: ['result'],
+const FilesystemOutputSchema = {
+  // ... schema definition
 };
 
 // Create the tool instance.
-export const calculatorTool = new Tool({
-  // A unique name for your tool. This is used in the prompt.
-  name: 'calculator',
-  // A clear description that helps the language model understand what this tool does.
-  description: 'A simple calculator that can add, subtract, multiply, or divide two numbers.',
-  inputSchema: CalculatorInputSchema,
-  outputSchema: CalculatorOutputSchema,
+export const filesystemTool = new Tool({
+  name: 'filesystem',
+  description: 'Performs file system operations like reading, writing, and listing files.',
+  inputSchema: FilesystemInputSchema,
+  outputSchema: FilesystemOutputSchema,
 
   // The core logic of the tool.
-  async execute(input: { operation: string, a: number, b: number }) {
-    let result: number;
-    switch (input.operation) {
-      case 'add':
-        result = input.a + input.b;
-        break;
-      case 'subtract':
-        result = input.a - input.b;
-        break;
-      case 'multiply':
-        result = input.a * input.b;
-        break;
-      case 'divide':
-        if (input.b === 0) {
-            throw new Error("Cannot divide by zero.");
-        }
-        result = input.a / input.b;
-        break;
-      default:
-        throw new Error(`Unknown operation: ${input.operation}`);
-    }
-    return { result };
+  async execute(input: { operation: string, path: string, content?: string }) {
+    // IMPORTANT: Security checks are included to prevent path traversal attacks.
+    // ...
+    
+    // Logic to handle readFile, writeFile, and listFiles
+    // ...
+    
+    return { /* result */ };
   },
 });
 ```
 
 ### Step 3: Register the Tool with the Server
 
-Now, open `src/server.ts` and tell the MCP server about your new tool.
+In `src/server.ts`, the new tool is imported and registered with the server instance.
 
-1.  **Import** the tool at the top of the file.
-2.  **Add** the tool inside the `addTools` method using `this.server.addTool()`.
-
-Your `src/server.ts` will now look like this:
 ```typescript
 // src/server.ts (updated)
 import { McpServer, OllamaProvider } from '@model-context-protocol/server';
 import { echoTool } from './tools/echo';
-import { calculatorTool } from './tools/calculator'; // <-- 1. Import your new tool
+import { filesystemTool } from './tools/filesystem'; // <-- 1. Import the new tool
 
-/**
- * A robust, class-based implementation of an MCP server for Chat Studio.
- * This structure makes it easier to manage providers and tools as the
- * server grows in complexity.
- */
 class ChatStudioMcpServer {
-  // ... constructor and other methods remain the same
+  // ... constructor and other methods
 
-  /**
-   * Registers the tools that the server will expose.
-   * To add a new tool, import it and add it to this method.
-   */
   private addTools(): void {
-    // Add the built-in echo tool
     this.server.addTool(echoTool);
     console.log(`Tool added: ${echoTool.spec.name}`);
     
-    // Add your new calculator tool
-    this.server.addTool(calculatorTool); // <-- 2. Register your new tool
-    console.log(`Tool added: ${calculatorTool.spec.name}`);
+    // Register the filesystem tool
+    this.server.addTool(filesystemTool); // <-- 2. Register the tool
+    console.log(`Tool added: ${filesystemTool.spec.name}`);
   }
 
   // ... other methods
 }
 
-// ... Initialization code remains the same
+// ... Initialization code
 ```
 
-### Step 4: Restart and Use Your New Tool
+### Step 4: Restart and Use the Filesystem Tool
 
 1.  Stop the server if it's running (`Ctrl+C`).
 2.  Restart it with `npm start`.
-3.  Go to the Chat Studio application. In the sidebar, you should now see `calculator` listed under "Available Tools".
+3.  Go to the Chat Studio application. In the sidebar, you should now see `filesystem` listed under "Available Tools".
 4.  Select a model and try a prompt that uses the tool, for example:
 
-    `What is 125 divided by 5?`
+    `Using the filesystem tool, list all files in the current directory.`
 
-The language model should understand the request, use your `calculator` tool, and give you the correct answer based on the tool's output.
+The language model should understand the request, use your `filesystem` tool, and give you the correct output. You can also ask it to read from or write to files.
