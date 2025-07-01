@@ -1,37 +1,23 @@
-import { McpServer, HttpServerTransport, ollamaProvider } from '@model-context-protocol/server';
+import { McpServer, StdioServerTransport } from '@model-context-protocol/server';
 import { echoTool } from './tools/echo';
 import { filesystemTool } from './tools/filesystem';
 
 /**
- * An all-in-one, standalone MCP server.
- * This server listens on an HTTP port and provides both model access
- * (by connecting to a local Ollama instance) and a set of tools.
- * It's the simplest way to get started with MCP for Chat Studio.
+ * An MCP Tool Provider Server.
+ * This server is designed to be launched as a child process by a main
+ * MCP host/orchestrator. It communicates over standard I/O (stdio)
+ * and exposes a set of tools for the main host to use.
  */
-class ChatStudioMcpServer {
+class ChatStudioToolServer {
   private readonly server: McpServer;
-  private readonly port: number;
 
-  constructor(port: number = 8008) {
-    this.port = port;
+  constructor() {
     this.server = new McpServer({
-      // Use HttpServerTransport to listen for requests over HTTP.
-      transport: new HttpServerTransport({ port: this.port }),
+      // Use StdioServerTransport to communicate with a parent process.
+      transport: new StdioServerTransport(),
     });
 
-    this.addProviders();
     this.addTools();
-  }
-
-  /**
-   * Registers the model providers the server will use.
-   * This configuration connects to a local Ollama instance.
-   */
-  private addProviders(): void {
-    // The provider will automatically read the OLLAMA_BASE_URL from the
-    // environment variables of the shell running this server.
-    this.server.addProvider(ollamaProvider);
-    console.log(`Provider added: ollama`);
   }
 
   /**
@@ -49,24 +35,22 @@ class ChatStudioMcpServer {
   }
 
   /**
-   * Starts the MCP server and begins listening for requests over HTTP.
+   * Starts the MCP server and begins listening for requests over stdio.
    */
   public async start(): Promise<void> {
     try {
       await this.server.start();
-      console.log(`MCP Server started successfully on http://localhost:${this.port}`);
-      console.log('This server provides access to Ollama models and the following tools: echo, filesystem.');
+      console.log('MCP Tool Server started successfully over stdio.');
+      console.log('This server provides the following tools: echo, filesystem.');
     } catch (error) {
-      console.error(`Failed to start MCP server on port ${this.port}:`, error);
+      console.error(`Failed to start MCP tool server:`, error);
       process.exit(1);
     }
   }
 }
 
 // --- Initialization ---
-// Use the PORT environment variable if available, otherwise default to 8008.
-const port = process.env.PORT ? parseInt(process.env.PORT, 10) : 8008;
-const mcpServer = new ChatStudioMcpServer(port);
+const mcpToolServer = new ChatStudioToolServer();
 
 // Start the server
-mcpServer.start();
+mcpToolServer.start();

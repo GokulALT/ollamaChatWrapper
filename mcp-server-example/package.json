@@ -1,7 +1,7 @@
 {
-  "name": "mcp-server-example",
+  "name": "mcp-server-example-tools",
   "version": "1.0.0",
-  "description": "A standalone MCP server that connects to Ollama and provides filesystem and echo tools.",
+  "description": "An example MCP tool provider, written in TypeScript, that exposes filesystem and echo tools via stdio.",
   "main": "src/server.ts",
   "scripts": {
     "start": "ts-node src/server.ts",
