@@ -1,4 +1,4 @@
-import { Tool } from '@mcp/server';
+import { Tool } from '@model-context-protocol/server';
 
 // Define the schema for the tool's input
 const EchoInputSchema = {

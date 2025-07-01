@@ -8,7 +8,7 @@
     "build": "tsc"
   },
   "dependencies": {
-    "@mcp/server": "^0.0.8"
+    "@model-context-protocol/server": "^0.0.8"
   },
   "devDependencies": {
     "@types/node": "^20.12.12",

@@ -1,4 +1,4 @@
-import { McpServer, OllamaProvider } from '@mcp/server';
+import { McpServer, OllamaProvider } from '@model-context-protocol/server';
 import { echoTool } from './tools/echo';
 
 /**

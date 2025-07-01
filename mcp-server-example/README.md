@@ -1,6 +1,6 @@
 # Example MCP Server (TypeScript)
 
-This folder contains a robust, example Model Context Protocol (MCP) server built using the official [`@mcp/server` TypeScript SDK](https://github.com/modelcontextprotocol/typescript-sdk). It's designed to be a fast and reliable starting point for creating your own custom MCP servers and integrating tools.
+This folder contains a robust, example Model Context Protocol (MCP) server built using the official [`@model-context-protocol/server` TypeScript SDK](https://github.com/model-context-protocol/typescript-sdk). It's designed to be a fast and reliable starting point for creating your own custom MCP servers and integrating tools.
 
 This server is pre-configured to:
 - Connect to a local Ollama instance to provide language models.
@@ -46,7 +46,7 @@ Open `src/tools/calculator.ts` and add the following code. We'll define the tool
 ```typescript
 // src/tools/calculator.ts
 
-import { Tool } from '@mcp/server';
+import { Tool } from '@model-context-protocol/server';
 
 // Define the schema for the tool's input using JSON Schema format.
 const CalculatorInputSchema = {
@@ -114,7 +114,7 @@ Now, open `src/server.ts` and tell the MCP server about your new tool.
 Your `src/server.ts` will now look like this:
 ```typescript
 // src/server.ts (updated)
-import { McpServer, OllamaProvider } from '@mcp/server';
+import { McpServer, OllamaProvider } from '@model-context-protocol/server';
 import { echoTool } from './tools/echo';
 import { calculatorTool } from './tools/calculator'; // <-- 1. Import your new tool
 
