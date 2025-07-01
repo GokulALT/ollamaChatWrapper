@@ -31,6 +31,15 @@ This server is pre-configured to:
 
 If successful, you will see a message like `MCP Server started successfully on http://localhost:8008`. You can now go back to the Chat Studio application, set the Connection Mode to "MCP Server", and start chatting.
 
+## Configuration
+
+Unlike the pre-built MCP server executables that use an `mcp_config.json` file, this TypeScript-based server is configured directly within the code. All settings, including the port, model providers, and tools, are managed in `src/server.ts`.
+
+This approach offers greater flexibility and type safety. To make changes:
+-   **Port**: Modify the `PORT` constant at the bottom of `src/server.ts`.
+-   **Providers**: Add or remove providers in the `addProviders()` method.
+-   **Tools**: Add or remove tools in the `addTools()` method (as shown in the guide below).
+
 ## How to Add a New Tool
 
 The real power of MCP comes from adding your own tools. Here’s a step-by-step guide to adding a new `calculator` tool.
