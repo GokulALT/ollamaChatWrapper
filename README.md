@@ -72,16 +72,18 @@ Chat Studio is an MCP Client. To use its full potential (including tools), you'l
 
 ### Option 1: Use the Included TypeScript Example Server (Recommended for simplicity)
 
-This project includes a ready-to-run, all-in-one MCP server in the `mcp-server-example` folder. It's the perfect starting point and is configured to:
+This project includes a ready-to-run, all-in-one MCP server in the `mcp-server-standalone-example` folder. It's the perfect starting point and is configured to:
 - Connect to your local **Ollama** instance.
-- Provide a `filesystem` tool for interacting with your local files.
+- Provide a simple `echo` tool.
 - Run on its own without needing any external configuration files.
 
-For detailed instructions, please see the [**README in that folder**](./mcp-server-example/README.md).
+For detailed instructions, please see the [**README in that folder**](./mcp-server-standalone-example/README.md).
 
 ### Option 2: Use the Pre-built Executable (Advanced orchestration)
 
 For advanced use cases, such as orchestrating multiple tool processes written in different languages (like Python or Go), you should use the pre-built `mcp-server` executable. This acts as a central **host** that launches and manages other tool servers based on a configuration file.
+
+This project also includes an example of a TypeScript **tool provider** in the `mcp-server-example` folder, which is designed to be launched by this executable.
 
 1.  **Download the Executable**: Download the `mcp-server` executable for your operating system from the [**official MCP GitHub Releases**](https://github.com/model-context-protocol/mcp-server/releases).
 
@@ -280,7 +282,8 @@ CHROMA_PASSWORD=your_password
     *   `src/components/chat-window.tsx`: The main chat interface component.
     *   `src/components/model-selector.tsx`: Component for selecting models.
     *   `src/components/ollama-status.tsx`: Component for displaying MCP server status.
-*   `mcp-server-example/`: A standalone, customizable MCP server built with TypeScript.
+*   `mcp-server-example/`: An advanced, stdio-based MCP tool provider built with TypeScript.
+*   `mcp-server-standalone-example/`: A simple, all-in-one MCP server built with TypeScript.
 *   `src/lib/`: Utility functions.
 *   `src/types/`: TypeScript type definitions.
 *   `public/`: Static assets.
