@@ -14,6 +14,18 @@ This server is pre-configured to provide:
 - **npm**: Comes with Node.js.
 - **MCP Server Executable**: You need the [pre-built `mcp-server`](https://github.com/model-context-protocol/mcp/releases) executable to act as the host.
 
+## How Configuration and Execution Works
+
+This is a critical point: **this TypeScript server (`server.ts`) does not read the `mcp_config.json` file directly.**
+
+The architecture is a two-part system:
+
+1.  **The Host Process (`mcp-server` executable):** This is the main orchestrator that you run from your terminal. It is the *only* process that reads `mcp_config.json`. This configuration file tells the host which model providers and tool servers to launch and manage.
+
+2.  **The Tool Process (this TypeScript server):** This server is launched *by the host process*. The `command` and `args` in the config file (e.g., `npm start`) tell the host how to start this server. Once running, it communicates with the host over `stdio` instead of a network port. Its own behavior (like which tools to load) is defined within `src/server.ts`.
+
+In short: The `mcp_config.json` configures the *host*, which in turn *runs* this tool server.
+
 ## How to Run This Tool Server
 
 You do **not** run this server directly and connect to it from Chat Studio. Instead, you configure your main `mcp-server` executable to run it for you.
@@ -53,10 +65,10 @@ Here is an example `mcp_config.json` entry:
 ```
 **Key Configuration Details:**
 -   `"name"`: A name for your tool server, e.g., `custom-ts-server`. The tools it exposes (`filesystem`, `echo`) will be available under this scope.
--   `"command"`: The command to run. We use `npm`.
--   `"args"`: The arguments for the command. `["start"]` will execute the `npm start` script from this folder's `package.json`.
+-   `"command": "npm"`: The command for the host to execute.
+-   `"args": ["start"]`: The arguments for the command. `["start"]` will execute the `npm start` script from this folder's `package.json`.
 -   `"listen": "stdio"`: This is the crucial part. It tells the host to communicate with this process using stdin/stdout, not a network port.
--   `"cwd"`: The working directory from which to run the command. This should point to the `mcp-server-example` directory.
+-   `"cwd": "./mcp-server-example"`: The working directory from which to run the command. This should point to the `mcp-server-example` directory.
 
 ### 3. Run the Main MCP Host
 
