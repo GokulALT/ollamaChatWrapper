@@ -2,6 +2,13 @@ import { Tool } from '@model-context-protocol/server';
 import fs from 'fs/promises';
 import path from 'path';
 
+/**
+ * This file is an example of an "in-process" tool for the TypeScript MCP server.
+ * It uses Node.js's built-in modules to perform filesystem operations securely.
+ * Note the security checks to prevent path traversal, which is a key consideration
+ * when giving an AI model access to the filesystem.
+ */
+
 // Define the schema for the tool's input.
 const FilesystemInputSchema = {
   type: 'object' as const,

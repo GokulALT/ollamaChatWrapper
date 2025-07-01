@@ -72,11 +72,9 @@ Chat Studio is an MCP Client. To use its full potential (including tools), you'l
 
 You have two main options for running an MCP server:
 
-1.  **Use the Included TypeScript Example Server (Recommended & More Customizable)**: This project includes a ready-to-run example server in the `mcp-server-example` folder. It's a great starting point if you want to build your own tools in TypeScript. See the [**README in that folder**](./mcp-server-example/README.md) for setup instructions.
+### Option 1: Use the Pre-built Executables (Recommended for External Tools)
 
-2.  **Use the Pre-built Executables**: For a quick start, you can download and run the official MCP server binaries.
-
-### Using Pre-built Executables
+This is the best approach if you want to **orchestrate multiple, separate tool processes**, especially if they are written in different languages (like Python) or are standalone executables. This method uses an `mcp_config.json` file to manage everything.
 
 For detailed instructions, always refer to the [official MCP Quickstart](https://modelcontextprotocol.io/quickstart/user).
 
@@ -84,15 +82,15 @@ For detailed instructions, always refer to the [official MCP Quickstart](https:/
 
 You'll need at least two executables from the [MCP Releases page on GitHub](https://github.com/model-context-protocol/mcp/releases):
 
-*   **The MCP Server**: The core engine (e.g., `mcp-server.exe` on Windows).
+*   **The MCP Server**: The core engine that reads your config file (e.g., `mcp-server.exe` on Windows).
 *   **A Model Provider**: Connects to your language models (e.g., `provider-ollama.exe`).
-*   **(Optional) Tools**: To add capabilities, download tool servers like `server-filesystem.exe`.
+*   **(Optional) Tools**: To add capabilities, download or create tool servers like `server-filesystem.exe` or your own Python scripts.
 
 Download the latest executables for your operating system and place them all in the **same directory**.
 
 #### 2. Create a Configuration File
 
-In the same directory, create a file named `mcp_config.json`. This file tells the MCP server which models and tools to load.
+In the same directory, create a file named `mcp_config.json`. This file tells the MCP server which models and tools to launch and manage.
 
 Here is a sample configuration that enables the Ollama provider and the filesystem tool:
 
@@ -129,6 +127,15 @@ Open a terminal or command prompt, navigate to your directory, and run the serve
 ```
 
 If successful, you'll see log messages indicating the server is running on `localhost:8008`.
+
+### Option 2: Use the Included TypeScript Example Server (For Custom, In-Process Tools)
+
+This project includes a ready-to-run example server in the `mcp-server-example` folder. It's a great starting point if you want to build your own tools **directly within a Node.js environment using TypeScript**.
+
+-   **No `mcp_config.json`**: This server is configured programmatically inside `src/server.ts`.
+-   **In-Process Tools**: Tools like `filesystem` are built with Node.js and run inside the same process as the server.
+
+See the [**README in that folder**](./mcp-server-example/README.md) for setup instructions.
 
 ## Getting Started with Chat Studio
 

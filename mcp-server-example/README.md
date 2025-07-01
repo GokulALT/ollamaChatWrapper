@@ -1,11 +1,11 @@
 # Example MCP Server (TypeScript)
 
-This folder contains a robust, example Model Context Protocol (MCP) server built using the official [`@model-context-protocol/server` TypeScript SDK](https://github.com/model-context-protocol/typescript-sdk). It's designed to be a fast and reliable starting point for creating your own custom MCP servers and integrating tools.
+This folder contains a robust, example Model Context Protocol (MCP) server built using the official [`@model-context-protocol/server` TypeScript SDK](https://github.com/model-context-protocol/typescript-sdk). It's designed to be a fast and reliable starting point for creating your own custom MCP servers and integrating tools **within a Node.js environment**.
 
 This server is pre-configured to:
 - Connect to a local Ollama instance to provide language models.
 - Include a simple `echo` tool as a basic example.
-- Include a powerful `filesystem` tool to read, write, and list local files.
+- Include a powerful `filesystem` tool to read, write, and list local files, demonstrating how to build tools directly in TypeScript.
 
 ## Prerequisites
 
@@ -34,16 +34,18 @@ If successful, you will see a message like `MCP Server started successfully on h
 
 ## Configuration
 
-Unlike the pre-built MCP server executables that use an `mcp_config.json` file, this TypeScript-based server is configured directly within the code. All settings, including the port, model providers, and tools, are managed in `src/server.ts`.
+Unlike the pre-built MCP server executables that use an `mcp_config.json` file to manage external processes, this TypeScript-based server is **configured directly within the code**. All settings, including the port, model providers, and tools, are managed in `src/server.ts`.
 
-This approach offers greater flexibility and type safety. To make changes:
+This "in-process" approach offers greater flexibility and type safety when building a self-contained server in Node.js. To make changes:
 -   **Port**: Modify the `PORT` constant at the bottom of `src/server.ts`.
 -   **Providers**: Add or remove providers in the `addProviders()` method.
 -   **Tools**: Add or remove tools in the `addTools()` method (as shown in the guide below).
 
+If you need to orchestrate tools written in other languages (like Python) or other standalone executables, you should use the pre-built `mcp-server` and an `mcp_config.json` file, as described in the main project README.
+
 ## How to Add a New Tool
 
-The real power of MCP comes from adding your own tools. This server includes a `filesystem` tool as a powerful, real-world example. Here’s a breakdown of how it was built, which you can use as a guide for your own tools.
+The real power of MCP comes from adding your own tools. This server includes a `filesystem` tool as a powerful, real-world example of building a tool directly in TypeScript. You can use it as a guide for your own tools.
 
 ### Step 1: Create the Tool File
 
