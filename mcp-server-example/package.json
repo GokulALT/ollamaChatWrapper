@@ -1,7 +1,7 @@
 {
   "name": "mcp-server-example",
   "version": "1.0.0",
-  "description": "A simple example of an MCP server using the TypeScript SDK.",
+  "description": "An example of a robust Model Context Protocol (MCP) server using the official TypeScript SDK.",
   "main": "src/server.ts",
   "scripts": {
     "start": "ts-node src/server.ts",

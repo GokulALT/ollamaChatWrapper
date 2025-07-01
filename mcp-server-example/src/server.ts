@@ -1,46 +1,71 @@
-import { McpServer, OllamaProvider, Tool } from '@mcp/server';
+import { McpServer, OllamaProvider } from '@mcp/server';
 import { echoTool } from './tools/echo';
 
-// --- Configuration ---
-const PORT = 8008; // The port the MCP server will listen on
+/**
+ * A robust, class-based implementation of an MCP server for Chat Studio.
+ * This structure makes it easier to manage providers and tools as the
+ * server grows in complexity.
+ */
+class ChatStudioMcpServer {
+  private readonly server: McpServer;
+  private readonly port: number;
 
-async function main() {
-  // 1. Create a new MCP Server instance
-  const server = new McpServer({
-    // Optional: Add server-level configuration here
-  });
+  constructor(port: number) {
+    this.port = port;
+    this.server = new McpServer({
+      // Optional: Add server-level configuration here
+    });
 
-  // 2. Add one or more Model Providers
-  // This example adds an Ollama provider. It will automatically find and
-  // connect to a running Ollama instance on the default port.
-  const ollamaProvider = new OllamaProvider();
-  server.addProvider(ollamaProvider);
-  console.log('Ollama provider added.');
+    this.addProviders();
+    this.addTools();
+  }
 
-  // 3. Add one or more Tools
-  // Here we add our custom echo tool.
-  server.addTool(echoTool);
-  console.log(`Tool added: ${echoTool.spec.name}`);
+  /**
+   * Registers the model providers that the server will use.
+   * This example adds an Ollama provider, which automatically connects
+   * to a running Ollama instance.
+   */
+  private addProviders(): void {
+    const ollamaProvider = new OllamaProvider();
+    this.server.addProvider(ollamaProvider);
+    console.log('Ollama provider added.');
+  }
 
-  // You can add more tools here by importing them and calling server.addTool()
-  // See the README.md for a detailed guide on adding a new 'calculator' tool.
-  // Example:
-  // import { calculatorTool } from './tools/calculator';
-  // server.addTool(calculatorTool);
-  // console.log(`Tool added: ${calculatorTool.spec.name}`);
+  /**
+   * Registers the tools that the server will expose.
+   * To add a new tool, import it and add it to this method.
+   */
+  private addTools(): void {
+    // Add the built-in echo tool
+    this.server.addTool(echoTool);
+    console.log(`Tool added: ${echoTool.spec.name}`);
+    
+    // See the README.md for a detailed guide on adding a new 'calculator' tool.
+    // Example:
+    // import { calculatorTool } from './tools/calculator';
+    // this.server.addTool(calculatorTool);
+    // console.log(`Tool added: ${calculatorTool.spec.name}`);
+  }
 
-
-  // 4. Start the server
-  try {
-    await server.start(PORT);
-    console.log(`MCP Server started successfully on http://localhost:${PORT}`);
-    console.log('The server is now ready to accept connections from Chat Studio.');
-    console.log('Available Models and Tools will be dynamically loaded from this server.');
-
-  } catch (error) {
-    console.error('Failed to start MCP server:', error);
-    process.exit(1);
+  /**
+   * Starts the MCP server and listens for incoming connections.
+   */
+  public async start(): Promise<void> {
+    try {
+      await this.server.start(this.port);
+      console.log(`MCP Server started successfully on http://localhost:${this.port}`);
+      console.log('The server is now ready to accept connections from Chat Studio.');
+      console.log('Available Models and Tools will be dynamically loaded from this server.');
+    } catch (error) {
+      console.error('Failed to start MCP server:', error);
+      process.exit(1);
+    }
   }
 }
 
-main();
+// --- Configuration & Initialization ---
+const PORT = 8008; // The port the MCP server will listen on
+const mcpServer = new ChatStudioMcpServer(PORT);
+
+// Start the server
+mcpServer.start();

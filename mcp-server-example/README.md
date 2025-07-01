@@ -1,6 +1,6 @@
 # Example MCP Server (TypeScript)
 
-This folder contains a simple, functional Model Context Protocol (MCP) server built using the [`@mcp/server` TypeScript SDK](https://github.com/modelcontextprotocol/typescript-sdk). It's designed to be a starting point for creating your own custom MCP servers and integrating tools.
+This folder contains a robust, example Model Context Protocol (MCP) server built using the official [`@mcp/server` TypeScript SDK](https://github.com/modelcontextprotocol/typescript-sdk). It's designed to be a fast and reliable starting point for creating your own custom MCP servers and integrating tools.
 
 This server is pre-configured to:
 - Connect to a local Ollama instance to provide language models.
@@ -109,39 +109,41 @@ export const calculatorTool = new Tool({
 Now, open `src/server.ts` and tell the MCP server about your new tool.
 
 1.  **Import** the tool at the top of the file.
-2.  **Add** the tool to the server instance using `server.addTool()`.
+2.  **Add** the tool inside the `addTools` method using `this.server.addTool()`.
 
-Your `src/server.ts` should look like this:
-
+Your `src/server.ts` will now look like this:
 ```typescript
 // src/server.ts (updated)
-
-import { McpServer, OllamaProvider, Tool } from '@mcp/server';
+import { McpServer, OllamaProvider } from '@mcp/server';
 import { echoTool } from './tools/echo';
 import { calculatorTool } from './tools/calculator'; // <-- 1. Import your new tool
 
-// ... (server creation and provider code remains the same)
+/**
+ * A robust, class-based implementation of an MCP server for Chat Studio.
+ * This structure makes it easier to manage providers and tools as the
+ * server grows in complexity.
+ */
+class ChatStudioMcpServer {
+  // ... constructor and other methods remain the same
 
-async function main() {
-  // ...
-  const server = new McpServer({});
-  const ollamaProvider = new OllamaProvider();
-  server.addProvider(ollamaProvider);
-  console.log('Ollama provider added.');
+  /**
+   * Registers the tools that the server will expose.
+   * To add a new tool, import it and add it to this method.
+   */
+  private addTools(): void {
+    // Add the built-in echo tool
+    this.server.addTool(echoTool);
+    console.log(`Tool added: ${echoTool.spec.name}`);
+    
+    // Add your new calculator tool
+    this.server.addTool(calculatorTool); // <-- 2. Register your new tool
+    console.log(`Tool added: ${calculatorTool.spec.name}`);
+  }
 
-  // Add tools
-  server.addTool(echoTool);
-  console.log(`Tool added: ${echoTool.spec.name}`);
-
-  server.addTool(calculatorTool); // <-- 2. Register your new tool
-  console.log(`Tool added: ${calculatorTool.spec.name}`);
-
-  // ... (server start code remains the same)
-  await server.start(8008);
-  // ...
+  // ... other methods
 }
 
-main();
+// ... Initialization code remains the same
 ```
 
 ### Step 4: Restart and Use Your New Tool
