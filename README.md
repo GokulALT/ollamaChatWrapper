@@ -68,11 +68,9 @@ In essence, MCP acts as a bridge, connecting AI models to the vast resources ava
 
 ## Setting Up a Local MCP Server
 
-Chat Studio is an MCP Client. To use its full potential (including tools), you'll need to run an MCP server locally. This server acts as a bridge between Chat Studio and your models/tools.
+Chat Studio is an MCP Client. To use its full potential (including tools), you'll need to run an MCP server locally. This server acts as a bridge between Chat Studio and your models/tools. There are two primary ways to run an MCP server:
 
-The easiest way to get started is by using the **included TypeScript example server**.
-
-### Use the Included TypeScript Example Server (Recommended)
+### Option 1: Use the Included TypeScript Example Server (Recommended for simplicity)
 
 This project includes a ready-to-run, all-in-one MCP server in the `mcp-server-example` folder. It's the perfect starting point and is configured to:
 - Connect to your local **Ollama** instance.
@@ -81,11 +79,54 @@ This project includes a ready-to-run, all-in-one MCP server in the `mcp-server-e
 
 For detailed instructions, please see the [**README in that folder**](./mcp-server-example/README.md).
 
-### (Advanced) Use Pre-built Executables
+### Option 2: Use the Pre-built Executable (Advanced orchestration)
 
-For advanced use cases, such as orchestrating multiple tool processes written in different languages (like Python), you can use the pre-built `mcp-server` executable. This method uses an `mcp_config.json` file to manage everything.
+For advanced use cases, such as orchestrating multiple tool processes written in different languages (like Python or Go), you should use the pre-built `mcp-server` executable. This acts as a central **host** that launches and manages other tool servers based on a configuration file.
 
-For detailed instructions on this approach, please refer to the [official MCP Quickstart](https://modelcontextprotocol.io/quickstart/user).
+1.  **Download the Executable**: Download the `mcp-server` executable for your operating system from the [**official MCP GitHub Releases**](https://github.com/model-context-protocol/mcp-server/releases).
+
+2.  **Create a Configuration File**: Create a file named `mcp_config.json` in the same directory as the executable. This file tells the host server which tools to launch.
+
+3.  **Define Your Tools**: Populate the `mcp_config.json` file. The example below shows how to configure three different external tools: a Blender tool, a filesystem tool, and a custom Python weather tool.
+
+    ```json
+    {
+      "mcpServers": {
+        "blender": {
+          "command": "uvx",
+          "args": [
+            "blender-mcp"
+          ]
+        },
+        "filesystem": {
+          "command": "npx",
+          "args": [
+            "-y",
+            "@modelcontextprotocol/server-filesystem",
+            "D:\\AI_FileSys"
+          ]
+        },
+        "My App": {
+          "command": "C:\\Users\\...\\Python310\\Scripts\\uv.EXE",
+          "args": [
+            "run",
+            "--with",
+            "mcp[cli]",
+            "mcp",
+            "run",
+            "D:\\AI_HF\\MCP Tools\\weatherMCP.py"
+          ]
+        }
+      }
+    }
+    ```
+
+4.  **Run the Host Server**: Open a terminal, navigate to the directory containing your executable and config file, and run:
+    ```bash
+    ./mcp-server
+    ```
+
+The host server will start, launch the tools defined in your config, and be ready to accept connections from Chat Studio. For more details, refer to the [official MCP Quickstart](https://modelcontextprotocol.io/quickstart/user).
 
 ## Getting Started with Chat Studio
 
