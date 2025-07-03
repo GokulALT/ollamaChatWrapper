@@ -13,6 +13,7 @@ import {
   SidebarGroupContent
 } from '@/components/ui/sidebar';
 import type { ConnectionMode } from '@/types/chat';
+import { getOllamaUrl, getMcpUrl } from '@/lib/config';
 
 interface Model {
   id: string;
@@ -38,7 +39,12 @@ export function ModelSelector({ selectedModel, onSelectModel, refreshKey, connec
       setError(null);
       try {
         const fetchMode = connectionMode === 'rag' ? 'direct' : connectionMode;
-        const response = await fetch(`/api/ollama/models?mode=${fetchMode}`);
+        const baseUrl = fetchMode === 'mcp' ? getMcpUrl() : getOllamaUrl();
+        
+        const response = await fetch(`/api/ollama/models?mode=${fetchMode}`, {
+            headers: { 'X-Ollama-Url': baseUrl }
+        });
+
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
           throw new Error(errorData.error || `Failed to fetch: ${response.statusText}`);

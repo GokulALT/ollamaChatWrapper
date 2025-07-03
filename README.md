@@ -50,6 +50,7 @@ In essence, MCP acts as a bridge, connecting AI models to the vast resources ava
     *   **Direct Mode**: Connect directly to a local Ollama instance for simple chat.
     *   **MCP Mode**: Connect to an MCP server to leverage specialized tools.
     *   **RAG Mode**: Chat with your own documents using a local vector database.
+*   **Connection Management**: Configure your Ollama, MCP, and ChromaDB server URLs directly in the UI settings.
 *   **RAG (Retrieval-Augmented Generation)**: Upload `.txt` and `.docx` documents to a ChromaDB collection. Chat Studio will use these documents to provide context-aware answers.
 *   **MCP Tool Support**: In MCP mode, leverage any tool configured on your server (e.g., `filesystem` to analyze local files).
 *   **Model & Collection Selection**: Dynamically select AI models, and in RAG mode, choose your document collection from the sidebar.
@@ -141,17 +142,18 @@ The host server will start, launch the tools defined in your config, and be read
     # yarn install
     ```
 
-3.  **Configure Environment Variables:**
-    Create a `.env` file in the root of your project by copying the provided template, and adjust the values as needed.
+3.  **Configure Connection Endpoints:**
+    All connection settings are managed in the UI. Go to **Settings -> General** to configure the URLs for:
+    - Ollama (for Direct and RAG modes)
+    - MCP Server
+    - ChromaDB (for RAG mode)
+    These settings are saved locally in your browser. The `.env` file is only used for optional ChromaDB authentication.
+
+
+4.  **Optional: Configure Environment Variables:**
+    Create a `.env` file in the root of your project if you need to connect to a secured ChromaDB instance.
 
     ```env
-    # In Direct/RAG mode, use your Ollama URL (e.g., http://localhost:11434).
-    # In MCP mode, use your MCP server URL (e.g., http://localhost:8008).
-    OLLAMA_BASE_URL=http://localhost:11434
-
-    # The URL for your ChromaDB server, used in RAG mode.
-    CHROMA_URL=http://localhost:8000
-
     # --- Optional: ChromaDB Authentication ---
     # Set the method and credentials if your ChromaDB requires a login.
     # CHROMA_AUTH_METHOD= # 'token' or 'basic'
@@ -160,7 +162,7 @@ The host server will start, launch the tools defined in your config, and be read
     # CHROMA_PASSWORD=
     ```
 
-4.  **Run the development server:**
+5.  **Run the development server:**
     ```bash
     npm run dev
     # or
@@ -168,7 +170,7 @@ The host server will start, launch the tools defined in your config, and be read
     ```
     The application will typically be available at `http://localhost:9002`.
 
-5.  **Open your browser** and navigate to the application URL. You can select a connection mode in the settings.
+6.  **Open your browser**, navigate to the application URL, and configure your endpoints in the settings.
 
 ## Using RAG (Retrieval-Augmented Generation) Mode
 
@@ -243,7 +245,7 @@ For RAG mode to function, you need to have **ChromaDB** running locally, in addi
     ```bash
     docker run -p 8000:8000 ghcr.io/chroma-core/chroma
     ```
-    This will download the ChromaDB image and start it on `localhost:8000`, which is where Chat Studio expects to find it by default.
+    This will download the ChromaDB image and start it on `localhost:8000`. You can then enter this URL in the Chat Studio settings.
 
 ### Connecting to a Secured ChromaDB
 

@@ -46,8 +46,10 @@ async function chunkText(text: string, chunkSize: number = 1000, chunkOverlap: n
 }
 
 // Helper function to get ChromaClient with authentication support
-function getChromaClient() {
-    const chromaUrl = process.env.CHROMA_URL || 'http://localhost:8000';
+function getChromaClient(req: NextRequest) {
+    const chromaUrl = req.headers.get('X-Chroma-Url') || process.env.CHROMA_URL;
+    if (!chromaUrl) return null;
+
     const authMethod = process.env.CHROMA_AUTH_METHOD;
     const token = process.env.CHROMA_TOKEN;
     const username = process.env.CHROMA_USERNAME;
@@ -65,7 +67,15 @@ function getChromaClient() {
 }
 
 export async function POST(req: NextRequest) {
-    const ollamaBaseUrl = process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
+    const ollamaBaseUrl = req.headers.get('X-Ollama-Url') || process.env.OLLAMA_BASE_URL;
+    if (!ollamaBaseUrl) {
+        return NextResponse.json({ error: 'Ollama URL is not configured.' }, { status: 400 });
+    }
+
+    const chroma = getChromaClient(req);
+     if (!chroma) {
+        return NextResponse.json({ error: 'ChromaDB URL is not configured.' }, { status: 400 });
+    }
 
     try {
         const formData = await req.formData();
@@ -95,8 +105,7 @@ export async function POST(req: NextRequest) {
         }
 
         const chunks = await chunkText(text);
-
-        const chroma = getChromaClient();
+        
         const embedder = new OllamaEmbeddingFunction(ollamaBaseUrl, 'nomic-embed-text');
 
         const collection = await chroma.getOrCreateCollection({

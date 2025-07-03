@@ -2,9 +2,13 @@
 import { type NextRequest, NextResponse } from 'next/server';
 
 export async function GET(req: NextRequest) {
-  const baseUrl = process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
+  const baseUrl = req.headers.get('X-Ollama-Url') || process.env.OLLAMA_BASE_URL;
   const mode = req.nextUrl.searchParams.get('mode') || 'mcp';
   const serverName = mode.toUpperCase();
+
+  if (!baseUrl) {
+    return NextResponse.json({ online: false, message: `URL for ${serverName} is not configured.` }, { status: 200 });
+  }
 
   try {
     const endpoint = mode === 'direct' ? `${baseUrl}/api/tags` : `${baseUrl}/v1/models`;

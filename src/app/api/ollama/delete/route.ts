@@ -2,7 +2,11 @@
 import { type NextRequest, NextResponse } from 'next/server';
 
 export async function POST(req: NextRequest) {
-  const ollamaBaseUrl = process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
+  const baseUrl = req.headers.get('X-Ollama-Url') || process.env.OLLAMA_BASE_URL;
+  if (!baseUrl) {
+    return NextResponse.json({ error: 'Ollama URL is not configured.' }, { status: 400 });
+  }
+
   try {
     const body = await req.json();
     const modelName = body.name;
@@ -11,7 +15,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Model name is required' }, { status: 400 });
     }
     
-    const response = await fetch(`${ollamaBaseUrl}/api/delete`, {
+    const response = await fetch(`${baseUrl}/api/delete`, {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
