@@ -96,54 +96,75 @@ For detailed instructions, please see the [**README in that folder**](./mcp-serv
 
 ### Option 2: Run an Orchestrated Server with a Config File (Advanced)
 
-For advanced use cases, such as orchestrating multiple tool processes written in different languages (like Python or Go), you should use the pre-built `mcp-server` executable. This acts as a central **host** that launches and manages other tool servers based on a configuration file.
+For advanced use cases, such as orchestrating multiple tool processes written in different languages, you should use the pre-built `mcp-server` executable. This acts as a central **host** that launches and manages other tool servers based on a configuration file. The `mcp-server-example` in this project is designed to be one of these tools.
 
-This project also includes an example of a TypeScript **tool provider** in the `mcp-server-example` folder, which is designed to be launched by this executable.
+#### Step 1: Get the Host Executable
+Download the `mcp-server` executable for your operating system from the [**official MCP GitHub Releases**](https://github.com/model-context-protocol/mcp-server/releases). Place it in a convenient directory.
 
-1.  **Download the Executable**: Download the `mcp-server` executable for your operating system from the [**official MCP GitHub Releases**](https://github.com/model-context-protocol/mcp-server/releases).
+#### Step 2: Create a Configuration File
+In the same directory as the executable, create a file named `mcp_config.json`. This file tells the host which tools to launch. Below are two examples.
 
-2.  **Create a Configuration File**: Create a file named `mcp_config.json` in the same directory as the executable. This file tells the host server which tools to launch.
+**Example A: Simple Config (Launching the TypeScript Tool)**
 
-3.  **Define Your Tools**: Populate the `mcp_config.json` file. The example below shows how to configure three different external tools: a Blender tool, a filesystem tool, and a custom Python weather tool.
+This is the simplest config to get started. It tells the host to launch the `mcp-server-example` from this project, which provides the `filesystem` and `echo` tools.
 
-    ```json
-    {
-      "mcpServers": {
-        "blender": {
-          "command": "uvx",
-          "args": [
-            "blender-mcp"
-          ]
-        },
-        "filesystem": {
-          "command": "npx",
-          "args": [
-            "-y",
-            "@modelcontextprotocol/server-filesystem",
-            "D:\\AI_FileSys"
-          ]
-        },
-        "My App": {
-          "command": "C:\\Users\\...\\Python310\\Scripts\\uv.EXE",
-          "args": [
-            "run",
-            "--with",
-            "mcp[cli]",
-            "mcp",
-            "run",
-            "D:\\AI_HF\\MCP Tools\\weatherMCP.py"
-          ]
-        }
-      }
+```json
+{
+  "mcpServers": {
+    "my-typescript-tools": {
+      "command": "npm",
+      "args": [
+        "start"
+      ],
+      "workingDir": "path/to/your/chat-studio/mcp-server-example"
     }
-    ```
+  }
+}
+```
+**Important:** You must replace `"path/to/your/chat-studio/mcp-server-example"` with the correct absolute or relative path to that directory on your machine.
 
-4.  **Run the Host Server**: Open a terminal, navigate to the directory containing your executable and config file, and run:
-    ```bash
-    ./mcp-server
-    ```
+**Example B: Advanced Config (Multiple External Tools)**
 
-The host server will start, launch the tools defined in your config, and be ready to accept connections from Chat Studio. For more details, refer to the [official MCP Quickstart](https://modelcontextprotocol.io/quickstart/user).
+This example demonstrates the full power of the host. It launches three separate tools: a Blender integration, a filesystem tool, and a custom weather tool written in Python. The host orchestrates all of them, making them available to Chat Studio simultaneously.
+
+```json
+{
+  "mcpServers": {
+    "blender": {
+      "command": "uvx",
+      "args": [
+        "blender-mcp"
+      ]
+    },
+    "filesystem": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-filesystem",
+        "D:\\AI_FileSys"
+      ]
+    },
+    "My App": {
+      "command": "C:\\Users\\...\\Python310\\Scripts\\uv.EXE",
+      "args": [
+        "run",
+        "--with",
+        "mcp[cli]",
+        "mcp",
+        "run",
+        "D:\\AI_HF\\MCP Tools\\weatherMCP.py"
+      ]
+    }
+  }
+}
+```
+
+#### Step 3: Run the Host Server
+Open a terminal, navigate to the directory containing your executable and `mcp_config.json` file, and run:
+```bash
+./mcp-server
+```
+The host server will start, launch the tools defined in your config, and be ready to accept connections. For more details, refer to the [official MCP Quickstart](https://modelcontextprotocol.io/quickstart/user).
 
 ---
 
