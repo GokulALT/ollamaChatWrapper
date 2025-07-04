@@ -69,18 +69,32 @@ In essence, MCP acts as a bridge, connecting AI models to the vast resources ava
 
 ## Setting Up a Local MCP Server
 
-Chat Studio is an MCP Client. To use its full potential (including tools), you'll need to run an MCP server locally. This server acts as a bridge between Chat Studio and your models/tools. There are two primary ways to run an MCP server:
+Chat Studio is an MCP Client. To use its full potential (including tools), you'll need to run an MCP server locally. This project includes two example TypeScript servers to demonstrate two different architectural approaches.
 
-### Option 1: Use the Included TypeScript Example Server (Recommended for simplicity)
+### Understanding the Two Example Servers
 
-This project includes a ready-to-run, all-in-one MCP server in the `mcp-server-standalone-example` folder. It's the perfect starting point and is configured to:
+1.  **Standalone Server (`mcp-server-standalone-example`)**:
+    *   **Purpose**: A simple, all-in-one server perfect for getting started quickly.
+    *   **Transport**: Uses `HttpServerTransport` to run on a network port (e.g., `http://localhost:8008`).
+    *   **How it Works**: You run it directly, and it provides both Ollama models and a simple `echo` tool in a single process. It does **not** use a config file. This is the easiest way to start with MCP.
+
+2.  **Orchestrated Tool Provider (`mcp-server-example`)**:
+    *   **Purpose**: A more advanced server designed to be a "tool" launched by a main orchestrator.
+    *   **Transport**: Uses `StdioServerTransport` to communicate with a parent process over standard I/O.
+    *   **How it Works**: You do **not** run this server directly. Instead, you run the pre-built `mcp-server` executable, which reads an `mcp_config.json` file and launches this server as a background process. This is the standard architecture for managing multiple tools, especially those written in different languages.
+
+---
+
+### Option 1: Run the Simple Standalone Server (Recommended for most users)
+
+The `mcp-server-standalone-example` folder contains a ready-to-run, all-in-one MCP server. It's the perfect starting point and is configured to:
 - Connect to your local **Ollama** instance.
 - Provide a simple `echo` tool.
 - Run on its own without needing any external configuration files.
 
 For detailed instructions, please see the [**README in that folder**](./mcp-server-standalone-example/README.md).
 
-### Option 2: Use the Pre-built Executable (Advanced orchestration)
+### Option 2: Run an Orchestrated Server with a Config File (Advanced)
 
 For advanced use cases, such as orchestrating multiple tool processes written in different languages (like Python or Go), you should use the pre-built `mcp-server` executable. This acts as a central **host** that launches and manages other tool servers based on a configuration file.
 
@@ -130,6 +144,8 @@ This project also includes an example of a TypeScript **tool provider** in the `
     ```
 
 The host server will start, launch the tools defined in your config, and be ready to accept connections from Chat Studio. For more details, refer to the [official MCP Quickstart](https://modelcontextprotocol.io/quickstart/user).
+
+---
 
 ## Getting Started with Chat Studio
 
