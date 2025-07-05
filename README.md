@@ -104,7 +104,7 @@ Download the `mcp-server` executable for your operating system from the [**offic
 #### Step 2: Create a Configuration File
 In the same directory as the executable, create a file named `mcp_config.json`. This file tells the host which tools to launch. Below are two examples.
 
-**Example A: Simple Config (Launching the TypeScript Tool)**
+**Example A: Launching the TypeScript Tool**
 
 This is the simplest config to get started. It tells the host to launch the `mcp-server-example` from this project, which provides the `filesystem` and `echo` tools.
 
@@ -123,48 +123,35 @@ This is the simplest config to get started. It tells the host to launch the `mcp
 ```
 **Important:** You must replace `"path/to/your/chat-studio/mcp-server-example"` with the correct absolute or relative path to that directory on your machine.
 
-**Example B: Advanced Config (Multiple External Tools)**
+**Example B: Launching a Python Tool**
 
-This example demonstrates the full power of the host. It launches three separate tools: a Blender integration, a filesystem tool, and a custom weather tool written in Python. The host orchestrates all of them, making them available to Chat Studio simultaneously.
+This example shows how to launch an external `stdio` tool, such as a Python script. This is the correct way to connect Chat Studio to a `stdio`-based server.
 
 ```json
 {
   "mcpServers": {
-    "blender": {
-      "command": "uvx",
+    "my-python-tools": {
+      "command": "python3",
       "args": [
-        "blender-mcp"
-      ]
-    },
-    "filesystem": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "@modelcontextprotocol/server-filesystem",
-        "D:\\AI_FileSys"
-      ]
-    },
-    "My App": {
-      "command": "C:\\Users\\...\\Python310\\Scripts\\uv.EXE",
-      "args": [
-        "run",
-        "--with",
-        "mcp[cli]",
-        "mcp",
-        "run",
-        "D:\\AI_HF\\MCP Tools\\weatherMCP.py"
-      ]
+        "/path/to/your/python_mcp_server.py",
+        "--config",
+        "/path/to/your/python_config.json"
+      ],
+      "workingDir": "/path/to/your/python_project"
     }
   }
 }
 ```
+*   `command`: The program to run (e.g., `python3`, `node`, or an executable).
+*   `args`: A list of arguments to pass to the command.
+*   `workingDir`: The directory to run the command in.
 
 #### Step 3: Run the Host Server
 Open a terminal, navigate to the directory containing your executable and `mcp_config.json` file, and run:
 ```bash
 ./mcp-server
 ```
-The host server will start, launch the tools defined in your config, and be ready to accept connections. For more details, refer to the [official MCP Quickstart](https://modelcontextprotocol.io/quickstart/user).
+The host server will start, launch the tools defined in your config, and be ready to accept connections from Chat Studio on its default port. For more details, refer to the [official MCP Quickstart](https://modelcontextprotocol.io/quickstart/user).
 
 ---
 
