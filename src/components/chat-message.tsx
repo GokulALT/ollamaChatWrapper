@@ -6,7 +6,7 @@ import type { ChatMessageData } from '@/types/chat';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { User, Bot, BookCopy, Clipboard, Check } from 'lucide-react';
+import { User, Bot, BookCopy, Clipboard, Check, Eye } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import {
   Accordion,
@@ -17,8 +17,6 @@ import {
 import { ScrollArea } from './ui/scroll-area';
 import { Button } from './ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-
 
 interface ChatMessageProps {
   message: ChatMessageData;
@@ -46,6 +44,68 @@ export function ChatMessage({ message }: ChatMessageProps) {
         description: "Could not copy code to clipboard.",
       });
     });
+  };
+
+  const CodeRenderer = ({ node, inline, className, children, ...props }: any) => {
+    const [showPreview, setShowPreview] = useState(false);
+    const codeText = String(children).replace(/\n$/, '');
+    const codeId = React.useId();
+    const match = /language-(\w+)/.exec(className || '');
+    const lang = match ? match[1] : '';
+
+    if (inline) {
+      return (
+        <code className={cn(className, 'bg-muted px-1 py-0.5 rounded text-xs')} {...props}>
+          {children}
+        </code>
+      );
+    }
+    
+    const isHtml = lang === 'html';
+
+    return (
+      <div className="relative group my-2">
+        <div className="absolute top-1 right-1 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+          {isHtml && (
+             <Button
+              size="icon"
+              variant="ghost"
+              className="h-6 w-6"
+              onClick={() => setShowPreview(!showPreview)}
+            >
+              <Eye size={14} />
+              <span className="sr-only">Toggle Preview</span>
+            </Button>
+          )}
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-6 w-6"
+            onClick={() => handleCopy(codeText, codeId)}
+          >
+            {copiedStates[codeId] ? (
+              <Check size={14} className="text-green-500" />
+            ) : (
+              <Clipboard size={14} />
+            )}
+            <span className="sr-only">Copy code</span>
+          </Button>
+        </div>
+        <pre className={cn(className, 'bg-muted p-2 rounded-md overflow-x-auto text-xs pt-8')} {...props}>
+          <code>{children}</code>
+        </pre>
+        {isHtml && showPreview && (
+          <div className="mt-2 rounded-md border">
+            <iframe
+              srcDoc={codeText}
+              className="w-full h-64 rounded-md bg-white"
+              sandbox="allow-scripts allow-modals"
+              title="HTML Preview"
+            />
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -78,77 +138,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
               ol: ({node, ...props}) => <ol className="list-decimal list-inside my-1" {...props} />,
               li: ({node, ...props}) => <li className="mb-0.5" {...props} />,
               p: ({node, ...props}) => <p className="mb-1" {...props} />,
-              pre: ({node, ...props}) => <pre className="bg-muted p-2 rounded-md overflow-x-auto text-xs my-1" {...props} />,
-              code: ({node, inline, className, children, ...props}) => {
-                const match = /language-(\w+)/.exec(className || '');
-                const codeText = String(children).replace(/\n$/, '');
-                const codeId = React.useId();
-                const lang = match ? match[1] : '';
-
-                if (lang === 'html' && !inline) {
-                   return (
-                      <Tabs defaultValue="preview" className="my-2 rounded-md border">
-                        <TabsList className="grid w-full grid-cols-2">
-                          <TabsTrigger value="preview">Preview</TabsTrigger>
-                          <TabsTrigger value="code">Code</TabsTrigger>
-                        </TabsList>
-                        <TabsContent value="preview" className="p-0">
-                          <iframe
-                            srcDoc={codeText}
-                            className="w-full h-64 rounded-b-md bg-white"
-                            sandbox="allow-scripts allow-modals"
-                            title="HTML Preview"
-                          />
-                        </TabsContent>
-                        <TabsContent value="code" className="p-0">
-                          <div className="relative group">
-                             <pre className={cn(className, 'bg-muted p-2 rounded-b-md overflow-x-auto text-xs my-0 pt-8')} {...props}>
-                              <code>{children}</code>
-                            </pre>
-                             <Button
-                              size="icon"
-                              variant="ghost"
-                              className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                              onClick={() => handleCopy(codeText, codeId)}
-                            >
-                              {copiedStates[codeId] ? (
-                                <Check size={14} className="text-green-500" />
-                              ) : (
-                                <Clipboard size={14} />
-                              )}
-                              <span className="sr-only">Copy code</span>
-                            </Button>
-                          </div>
-                        </TabsContent>
-                      </Tabs>
-                   )
-                }
-
-                return !inline && match ? (
-                  <div className="relative group my-2">
-                    <pre className={cn(className, 'bg-muted p-2 rounded-md overflow-x-auto text-xs pt-8')} {...props}>
-                      <code>{children}</code>
-                    </pre>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={() => handleCopy(codeText, codeId)}
-                    >
-                      {copiedStates[codeId] ? (
-                        <Check size={14} className="text-green-500" />
-                      ) : (
-                        <Clipboard size={14} />
-                      )}
-                      <span className="sr-only">Copy code</span>
-                    </Button>
-                  </div>
-                ) : (
-                  <code className={cn(className, 'bg-muted px-1 py-0.5 rounded text-xs')} {...props}>
-                    {children}
-                  </code>
-                );
-              }
+              code: CodeRenderer,
             }}
           >
             {message.text}
