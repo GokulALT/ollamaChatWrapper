@@ -50,6 +50,7 @@ In essence, MCP acts as a bridge, connecting AI models to the vast resources ava
     *   **Direct Mode**: Connect directly to a local Ollama instance for simple chat.
     *   **MCP Mode**: Connect to an MCP server to leverage specialized tools.
     *   **RAG Mode**: Chat with your own documents using a local vector database.
+*   **Connection Management**: Configure your Ollama, MCP, and ChromaDB server URLs directly in the UI settings.
 *   **RAG (Retrieval-Augmented Generation)**: Upload `.txt` and `.docx` documents to a ChromaDB collection. Chat Studio will use these documents to provide context-aware answers.
 *   **MCP Tool Support**: In MCP mode, leverage any tool configured on your server (e.g., `filesystem` to analyze local files).
 *   **Model & Collection Selection**: Dynamically select AI models, and in RAG mode, choose your document collection from the sidebar.
@@ -68,67 +69,91 @@ In essence, MCP acts as a bridge, connecting AI models to the vast resources ava
 
 ## Setting Up a Local MCP Server
 
-Chat Studio is an MCP Client. To use its full potential (including tools), you'll need to run an MCP server locally. This server acts as a bridge between Chat Studio and your models/tools.
+Chat Studio is an MCP Client. To use its full potential (including tools), you'll need to run an MCP server locally. This project includes two example TypeScript servers to demonstrate two different architectural approaches.
 
-You have two main options for running an MCP server:
+### Understanding the Two Example Servers
 
-1.  **Use the Included TypeScript Example Server (Recommended & More Customizable)**: This project includes a ready-to-run example server in the `mcp-server-example` folder. It's a great starting point if you want to build your own tools in TypeScript. See the [**README in that folder**](./mcp-server-example/README.md) for setup instructions.
+1.  **Standalone Server (`mcp-server-standalone-example`)**:
+    *   **Purpose**: A simple, all-in-one server perfect for getting started quickly.
+    *   **Transport**: Uses `HttpServerTransport` to run on a network port (e.g., `http://localhost:8008`).
+    *   **How it Works**: You run it directly, and it provides both Ollama models and a simple `echo` tool in a single process. It does **not** use a config file. This is the easiest way to start with MCP.
 
-2.  **Use the Pre-built Executables**: For a quick start, you can download and run the official MCP server binaries.
+2.  **Orchestrated Tool Provider (`mcp-server-example`)**:
+    *   **Purpose**: A more advanced server designed to be a "tool" launched by a main orchestrator.
+    *   **Transport**: Uses `StdioServerTransport` to communicate with a parent process over standard I/O.
+    *   **How it Works**: You do **not** run this server directly. Instead, you run the pre-built `mcp-server` executable, which reads an `mcp_config.json` file and launches this server as a background process. This is the standard architecture for managing multiple tools, especially those written in different languages.
 
-### Using Pre-built Executables
+---
 
-For detailed instructions, always refer to the [official MCP Quickstart](https://modelcontextprotocol.io/quickstart/user).
+### Option 1: Run the Simple Standalone Server (Recommended for most users)
 
-#### 1. Download MCP Components
+The `mcp-server-standalone-example` folder contains a ready-to-run, all-in-one MCP server. It's the perfect starting point and is configured to:
+- Connect to your local **Ollama** instance.
+- Provide a simple `echo` tool.
+- Run on its own without needing any external configuration files.
 
-You'll need at least two executables from the [MCP Releases page on GitHub](https://github.com/model-context-protocol/mcp/releases):
+For detailed instructions, please see the [**README in that folder**](./mcp-server-standalone-example/README.md).
 
-*   **The MCP Server**: The core engine (e.g., `mcp-server.exe` on Windows).
-*   **A Model Provider**: Connects to your language models (e.g., `provider-ollama.exe`).
-*   **(Optional) Tools**: To add capabilities, download tool servers like `server-filesystem.exe`.
+### Option 2: Run an Orchestrated Server with a Config File (Advanced)
 
-Download the latest executables for your operating system and place them all in the **same directory**.
+For advanced use cases, such as orchestrating multiple tool processes written in different languages, you should use the pre-built `mcp-server` executable. This acts as a central **host** that launches and manages other tool servers based on a configuration file. The `mcp-server-example` in this project is designed to be one of these tools.
 
-#### 2. Create a Configuration File
+#### Step 1: Get the Host Executable
+Download the `mcp-server` executable for your operating system from the [**official MCP GitHub Releases**](https://github.com/model-context-protocol/mcp-server/releases). Place it in a convenient directory.
 
-In the same directory, create a file named `mcp_config.json`. This file tells the MCP server which models and tools to load.
+#### Step 2: Create a Configuration File
+In the same directory as the executable, create a file named `mcp_config.json`. This file tells the host which tools to launch. Below are two examples.
 
-Here is a sample configuration that enables the Ollama provider and the filesystem tool:
+**Example A: Launching the TypeScript Tool**
+
+This is the simplest config to get started. It tells the host to launch the `mcp-server-example` from this project, which provides the `filesystem` and `echo` tools.
 
 ```json
 {
-  "listen": "localhost:8008",
-  "providers": [
-    {
-      "path": "./provider-ollama",
-      "listen": "tcp"
+  "mcpServers": {
+    "my-typescript-tools": {
+      "command": "npm",
+      "args": [
+        "start"
+      ],
+      "workingDir": "path/to/your/chat-studio/mcp-server-example"
     }
-  ],
-  "tools": [
-    {
-      "name": "filesystem",
-      "path": "./server-filesystem",
-      "listen": "tcp"
-    }
-  ]
+  }
 }
 ```
-*Note: On Windows, you might need to add the `.exe` extension to the paths (e.g., `"./provider-ollama.exe"`).*
+**Important:** You must replace `"path/to/your/chat-studio/mcp-server-example"` with the correct absolute or relative path to that directory on your machine.
 
-#### 3. Run the MCP Server
+**Example B: Launching a Python Tool**
 
-Open a terminal or command prompt, navigate to your directory, and run the server:
+This example shows how to launch an external `stdio` tool, such as a Python script. This is the correct way to connect Chat Studio to a `stdio`-based server.
 
-```bash
-# On Linux/macOS
-./mcp-server --config mcp_config.json
-
-# On Windows
-./mcp-server.exe --config mcp_config.json
+```json
+{
+  "mcpServers": {
+    "my-python-tools": {
+      "command": "python3",
+      "args": [
+        "/path/to/your/python_mcp_server.py",
+        "--config",
+        "/path/to/your/python_config.json"
+      ],
+      "workingDir": "/path/to/your/python_project"
+    }
+  }
+}
 ```
+*   `command`: The program to run (e.g., `python3`, `node`, or an executable).
+*   `args`: A list of arguments to pass to the command.
+*   `workingDir`: The directory to run the command in.
 
-If successful, you'll see log messages indicating the server is running on `localhost:8008`.
+#### Step 3: Run the Host Server
+Open a terminal, navigate to the directory containing your executable and `mcp_config.json` file, and run:
+```bash
+./mcp-server
+```
+The host server will start, launch the tools defined in your config, and be ready to accept connections from Chat Studio on its default port. For more details, refer to the [official MCP Quickstart](https://modelcontextprotocol.io/quickstart/user).
+
+---
 
 ## Getting Started with Chat Studio
 
@@ -141,17 +166,18 @@ If successful, you'll see log messages indicating the server is running on `loca
     # yarn install
     ```
 
-3.  **Configure Environment Variables:**
-    Create a `.env` file in the root of your project by copying the provided template, and adjust the values as needed.
+3.  **Configure Connection Endpoints:**
+    All connection settings are managed in the UI. Go to **Settings -> General** to configure the URLs for:
+    - Ollama (for Direct and RAG modes)
+    - MCP Server
+    - ChromaDB (for RAG mode)
+    These settings are saved locally in your browser. The `.env` file is only used for optional ChromaDB authentication.
+
+
+4.  **Optional: Configure Environment Variables:**
+    Create a `.env` file in the root of your project if you need to connect to a secured ChromaDB instance.
 
     ```env
-    # In Direct/RAG mode, use your Ollama URL (e.g., http://localhost:11434).
-    # In MCP mode, use your MCP server URL (e.g., http://localhost:8008).
-    OLLAMA_BASE_URL=http://localhost:11434
-
-    # The URL for your ChromaDB server, used in RAG mode.
-    CHROMA_URL=http://localhost:8000
-
     # --- Optional: ChromaDB Authentication ---
     # Set the method and credentials if your ChromaDB requires a login.
     # CHROMA_AUTH_METHOD= # 'token' or 'basic'
@@ -160,7 +186,7 @@ If successful, you'll see log messages indicating the server is running on `loca
     # CHROMA_PASSWORD=
     ```
 
-4.  **Run the development server:**
+5.  **Run the development server:**
     ```bash
     npm run dev
     # or
@@ -168,7 +194,7 @@ If successful, you'll see log messages indicating the server is running on `loca
     ```
     The application will typically be available at `http://localhost:9002`.
 
-5.  **Open your browser** and navigate to the application URL. You can select a connection mode in the settings.
+6.  **Open your browser**, navigate to the application URL, and configure your endpoints in the settings.
 
 ## Using RAG (Retrieval-Augmented Generation) Mode
 
@@ -181,6 +207,58 @@ In addition to the standard chat modes, Chat Studio includes a powerful RAG mode
 3.  **Retrieve**: When you ask a question, the app embeds your query and searches ChromaDB for the most relevant chunks of text from your documents.
 4.  **Generate**: This retrieved context is then passed to your selected language model along with your question, allowing the AI to generate an answer based on the content of your documents.
 
+### RAG Data Flow Diagram
+
+Here is a more detailed breakdown of the RAG system's architecture.
+
+**Part 1: Document Ingestion**
+```
+[User] --(Uploads file.txt)--> [Chat Studio UI]
+   |
+   v
+[Next.js API: /api/rag/upload]
+   |
+   +--> 1. Extract Text from file
+   |
+   +--> 2. Chunk Text into pieces
+   |
+   +--> 3. For each chunk:
+   |      |
+   |      '-- (Request Embedding) --> [Ollama: nomic-embed-text]
+   |                                      |
+   |      '<-----------------------------'  (Receive Vector)
+   |
+   +--> 4. Store (Vector + Text Chunk) --> [ChromaDB]
+```
+
+**Part 2: Query and Generation**
+```
+[User] --(Asks "What is X?")--> [Chat Studio UI]
+   |
+   v
+[Next.js API: /api/rag/chat]
+   |
+   +--> 1. Embed User's Question
+   |      |
+   |      '-- (Request Embedding) --> [Ollama: nomic-embed-text]
+   |                                      |
+   |      '<-----------------------------'  (Receive Query Vector)
+   |
+   +--> 2. Query ChromaDB with Vector --> [ChromaDB]
+   |                                        |
+   |      '<-------------------------------'  (Receive Relevant Context Chunks)
+   |
+   +--> 3. Construct Final Prompt:
+   |      (System Instructions + Context Chunks + Conversation History)
+   |
+   +--> 4. Send Final Prompt --> [Ollama: LLM (e.g., llama3)]
+   |                                |
+   |      '<-----------------------'  (Receive AI-generated Answer)
+   |
+   v
+[Chat Studio UI] --(Displays Answer & Sources)--> [User]
+```
+
 ### Prerequisites for RAG
 
 For RAG mode to function, you need to have **ChromaDB** running locally, in addition to Ollama. The easiest way to run ChromaDB is with Docker.
@@ -191,7 +269,7 @@ For RAG mode to function, you need to have **ChromaDB** running locally, in addi
     ```bash
     docker run -p 8000:8000 ghcr.io/chroma-core/chroma
     ```
-    This will download the ChromaDB image and start it on `localhost:8000`, which is where Chat Studio expects to find it by default.
+    This will download the ChromaDB image and start it on `localhost:8000`. You can then enter this URL in the Chat Studio settings.
 
 ### Connecting to a Secured ChromaDB
 
@@ -230,7 +308,8 @@ CHROMA_PASSWORD=your_password
     *   `src/components/chat-window.tsx`: The main chat interface component.
     *   `src/components/model-selector.tsx`: Component for selecting models.
     *   `src/components/ollama-status.tsx`: Component for displaying MCP server status.
-*   `mcp-server-example/`: A standalone, customizable MCP server built with TypeScript.
+*   `mcp-server-example/`: An advanced, stdio-based MCP tool provider built with TypeScript.
+*   `mcp-server-standalone-example/`: A simple, all-in-one MCP server built with TypeScript.
 *   `src/lib/`: Utility functions.
 *   `src/types/`: TypeScript type definitions.
 *   `public/`: Static assets.

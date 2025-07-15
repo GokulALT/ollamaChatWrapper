@@ -22,6 +22,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ThemeToggle } from '@/components/theme-toggle';
+import { getOllamaUrl, setOllamaUrl, getMcpUrl, setMcpUrl, getChromaUrl, setChromaUrl } from '@/lib/config';
 
 
 interface Model {
@@ -41,7 +42,9 @@ function DirectModelManager() {
     const fetchModels = useCallback(async () => {
         setIsLoading(true);
         try {
-            const res = await fetch('/api/ollama/models?mode=direct');
+            const res = await fetch('/api/ollama/models?mode=direct', {
+                headers: { 'X-Ollama-Url': getOllamaUrl() }
+            });
             if (!res.ok) throw new Error("Failed to fetch models");
             const data = await res.json();
             setModels(data);
@@ -66,7 +69,10 @@ function DirectModelManager() {
         try {
             const response = await fetch('/api/ollama/pull', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-Ollama-Url': getOllamaUrl() 
+                },
                 body: JSON.stringify({ name: pullModelName }),
             });
 
@@ -106,7 +112,10 @@ function DirectModelManager() {
         try {
             const res = await fetch('/api/ollama/delete', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-Ollama-Url': getOllamaUrl() 
+                },
                 body: JSON.stringify({ name: modelName }),
             });
             if (!res.ok) {
@@ -175,7 +184,9 @@ function RagManager() {
     const fetchCollections = useCallback(async () => {
         setIsLoadingCollections(true);
         try {
-            const res = await fetch('/api/rag/collections');
+            const res = await fetch('/api/rag/collections', {
+                headers: { 'X-Chroma-Url': getChromaUrl() }
+            });
             if (!res.ok) throw new Error('Failed to fetch collections');
             const data = await res.json();
             setCollections(data);
@@ -198,7 +209,10 @@ function RagManager() {
             const res = await fetch('/api/rag/collections', {
                 method: 'POST',
                 body: JSON.stringify({ name: newDbName }),
-                headers: { 'Content-Type': 'application/json' }
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'X-Chroma-Url': getChromaUrl() 
+                }
             });
             if (!res.ok) {
                 const err = await res.json();
@@ -218,7 +232,10 @@ function RagManager() {
         if (!selectedCollection) return;
         setIsDeleting(true);
         try {
-             const res = await fetch(`/api/rag/collections?name=${selectedCollection}`, { method: 'DELETE' });
+             const res = await fetch(`/api/rag/collections?name=${selectedCollection}`, { 
+                method: 'DELETE',
+                headers: { 'X-Chroma-Url': getChromaUrl() }
+             });
              if (!res.ok) {
                 const err = await res.json();
                 throw new Error(err.error);
@@ -248,6 +265,10 @@ function RagManager() {
             const res = await fetch('/api/rag/upload', {
                 method: 'POST',
                 body: formData,
+                headers: {
+                    'X-Ollama-Url': getOllamaUrl(),
+                    'X-Chroma-Url': getChromaUrl(),
+                }
             });
             if (!res.ok) {
                 const err = await res.json();
@@ -273,9 +294,10 @@ function RagManager() {
                 <AlertDescription>
                    For RAG mode to function, you need two services running locally:
                    <ul className="list-disc list-inside mt-2 text-xs">
-                        <li><span className="font-semibold">ChromaDB Server:</span> The vector database for your documents (usually at http://localhost:8000).</li>
+                        <li><span className="font-semibold">ChromaDB Server:</span> The vector database for your documents.</li>
                         <li><span className="font-semibold">Ollama:</span> Used for embedding documents and generating chat responses.</li>
                    </ul>
+                   You can configure the URLs for these services in the 'General' settings tab.
                 </AlertDescription>
             </Alert>
             <Card>
@@ -289,7 +311,7 @@ function RagManager() {
                             <form onSubmit={handleCreateCollection} className="flex items-center gap-2">
                                 <Input id="new-collection" placeholder="e.g., project-docs" value={newDbName} onChange={e => setNewDbName(e.target.value)} disabled={isCreating} />
                                 <Button type="submit" disabled={isCreating || !newDbName.trim()}>
-                                    {isCreating ? <Loader2 className="animate-spin" /> : "Create Database"}
+                                    {isCreating ? <Loader2 className="animate-spin" /> : "Create"}
                                 </Button>
                             </form>
                         </div>
@@ -315,11 +337,11 @@ function RagManager() {
             <Card>
                 <CardHeader>
                     <CardTitle className="text-base">Upload Document to Database</CardTitle>
-                    <CardDescription>Upload a .txt or .docx file to the selected database to be embedded.</CardDescription>
+                    <CardDescription>Upload a .txt,.html,.ts,.scss,.css,.json file to the selected database to be embedded.</CardDescription>
                 </CardHeader>
                 <CardContent>
                      <form onSubmit={handleFileUpload} className="flex items-center gap-2">
-                        <Input id="file-upload" type="file" accept=".txt,.docx" onChange={e => setFile(e.target.files ? e.target.files[0] : null)} disabled={isUploading || !selectedCollection} />
+                        <Input id="file-upload" type="file" accept=".txt,.html,.ts,.scss,.css,.json" onChange={e => setFile(e.target.files ? e.target.files[0] : null)} disabled={isUploading || !selectedCollection} />
                         <Button type="submit" size="icon" disabled={isUploading || !file || !selectedCollection}>
                             {isUploading ? <Loader2 className="animate-spin" /> : <Upload size={18} />}
                         </Button>
@@ -335,6 +357,12 @@ export default function SettingsPage() {
     const [connectionMode, setConnectionMode] = useState<ConnectionMode>('direct');
     const [systemPrompt, setSystemPrompt] = useState('');
     const [activeTab, setActiveTab] = useState("general");
+    
+    // State for connection URLs
+    const [ollamaUrl, setOllamaUrlState] = useState('');
+    const [mcpUrl, setMcpUrlState] = useState('');
+    const [chromaUrl, setChromaUrlState] = useState('');
+
 
     useEffect(() => {
         try {
@@ -346,6 +374,11 @@ export default function SettingsPage() {
             if (storedPrompt) {
                 setSystemPrompt(storedPrompt);
             }
+            // Load URLs from our config helpers
+            setOllamaUrlState(getOllamaUrl());
+            setMcpUrlState(getMcpUrl());
+            setChromaUrlState(getChromaUrl());
+
         } catch (error) {
             console.warn("Could not access localStorage.");
         }
@@ -394,43 +427,73 @@ export default function SettingsPage() {
                     </TabsList>
                     
                     <TabsContent value="general" className="flex flex-col gap-6 py-6">
-                        <div className="space-y-2">
-                            <Label>Connection Mode</Label>
-                             <RadioGroup
-                                value={connectionMode}
-                                onValueChange={(value) => handleConnectionModeChange(value as ConnectionMode)}
-                                className="flex items-center space-x-4 pt-2"
-                            >
-                                <div className="flex items-center space-x-2">
-                                    <RadioGroupItem value="direct" id="s-direct" />
-                                    <Label htmlFor="s-direct" className="font-normal">Direct</Label>
+                        <Card>
+                             <CardHeader>
+                                <CardTitle>Chat Configuration</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-6">
+                                <div className="space-y-2">
+                                    <Label>Connection Mode</Label>
+                                    <RadioGroup
+                                        value={connectionMode}
+                                        onValueChange={(value) => handleConnectionModeChange(value as ConnectionMode)}
+                                        className="flex items-center space-x-4 pt-2"
+                                    >
+                                        <div className="flex items-center space-x-2">
+                                            <RadioGroupItem value="direct" id="s-direct" />
+                                            <Label htmlFor="s-direct" className="font-normal">Direct</Label>
+                                        </div>
+                                        <div className="flex items-center space-x-2">
+                                            <RadioGroupItem value="mcp" id="s-mcp" />
+                                            <Label htmlFor="s-mcp" className="font-normal">MCP</Label>
+                                        </div>
+                                        <div className="flex items-center space-x-2">
+                                            <RadioGroupItem value="rag" id="s-rag" />
+                                            <Label htmlFor="s-rag" className="font-normal">RAG</Label>
+                                        </div>
+                                    </RadioGroup>
+                                    <p className="text-sm text-muted-foreground pt-1">
+                                        Choose how to connect to your language models.
+                                    </p>
                                 </div>
-                                <div className="flex items-center space-x-2">
-                                    <RadioGroupItem value="mcp" id="s-mcp" />
-                                    <Label htmlFor="s-mcp" className="font-normal">MCP</Label>
+                                <div className="space-y-2 flex-grow flex flex-col">
+                                <Label htmlFor="system-prompt">System Prompt</Label>
+                                <Textarea
+                                    id="system-prompt"
+                                    placeholder="e.g., You are a helpful assistant that always replies in pirate speak."
+                                    value={systemPrompt}
+                                    onChange={(e) => handleSystemPromptChange(e.target.value)}
+                                    className="flex-grow text-sm min-h-[150px]"
+                                />
+                                <p className="text-sm text-muted-foreground">
+                                    Sets the AI's behavior. In RAG mode, this can be used to augment the default context prompt.
+                                </p>
                                 </div>
-                                <div className="flex items-center space-x-2">
-                                    <RadioGroupItem value="rag" id="s-rag" />
-                                    <Label htmlFor="s-rag" className="font-normal">RAG</Label>
+                            </CardContent>
+                        </Card>
+                        
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Connection Endpoints</CardTitle>
+                                <CardDescription>
+                                    Define the URLs for the services Chat Studio connects to. These settings are saved in your browser.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="ollama-url">Ollama URL (for Direct & RAG)</Label>
+                                    <Input id="ollama-url" value={ollamaUrl} onChange={(e) => { setOllamaUrlState(e.target.value); setOllamaUrl(e.target.value); }} placeholder="http://localhost:11434" />
                                 </div>
-                            </RadioGroup>
-                            <p className="text-sm text-muted-foreground pt-1">
-                                Choose how to connect to your language models.
-                            </p>
-                         </div>
-                        <div className="space-y-2 flex-grow flex flex-col">
-                          <Label htmlFor="system-prompt">System Prompt</Label>
-                          <Textarea
-                            id="system-prompt"
-                            placeholder="e.g., You are a helpful assistant that always replies in pirate speak."
-                            value={systemPrompt}
-                            onChange={(e) => handleSystemPromptChange(e.target.value)}
-                            className="flex-grow text-sm min-h-[150px]"
-                          />
-                           <p className="text-sm text-muted-foreground">
-                            Sets the AI's behavior. In RAG mode, this can be used to augment the default context prompt.
-                          </p>
-                        </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="mcp-url">MCP Server URL</Label>
+                                    <Input id="mcp-url" value={mcpUrl} onChange={(e) => { setMcpUrlState(e.target.value); setMcpUrl(e.target.value); }} placeholder="http://localhost:8008" />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label htmlFor="chroma-url">ChromaDB URL</Label>
+                                    <Input id="chroma-url" value={chromaUrl} onChange={(e) => { setChromaUrlState(e.target.value); setChromaUrl(e.target.value); }} placeholder="http://localhost:8000" />
+                                </div>
+                            </CardContent>
+                        </Card>
                     </TabsContent>
 
                     <TabsContent value="models" className="flex flex-col gap-4 py-6">

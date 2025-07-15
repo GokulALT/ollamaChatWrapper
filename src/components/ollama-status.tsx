@@ -6,6 +6,7 @@ import { Server, CheckCircle2, WifiOff, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import type { ConnectionMode } from '@/types/chat';
+import { getOllamaUrl, getMcpUrl } from '@/lib/config';
 
 interface StatusState {
   online: boolean | null; // null for initial loading state
@@ -26,7 +27,17 @@ export function OllamaStatus({ connectionMode }: OllamaStatusProps) {
   useEffect(() => {
     const fetchStatus = async () => {
       try {
-        const response = await fetch(`/api/ollama/status?mode=${connectionMode}`);
+        const mode = connectionMode;
+        const baseUrl = mode === 'mcp' ? getMcpUrl() : getOllamaUrl();
+
+        if (!baseUrl) {
+          setStatus({ online: false, message: 'URL not configured.' });
+          return;
+        }
+
+        const response = await fetch(`/api/ollama/status?mode=${mode}`, {
+          headers: { 'X-Ollama-Url': baseUrl }
+        });
         const data = await response.json();
         setStatus({
           online: data.online,

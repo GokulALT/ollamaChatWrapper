@@ -24,7 +24,6 @@ import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { MessageSquare, FilePlus2, Settings, Server, BrainCircuit, Bot } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { SettingsDialog } from '@/components/settings-dialog';
 import { CollectionSelector } from '@/components/collection-selector';
 import type { ConnectionMode } from '@/types/chat';
 
@@ -32,7 +31,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
   const [newChatKey, setNewChatKey] = useState<number>(Date.now());
   const [systemPrompt, setSystemPrompt] = useState<string | null>(null);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [refreshKey, setRefreshKey] = useState<number>(Date.now());
   const [selectedCollection, setSelectedCollection] = useState<string | null>(null);
   
@@ -196,9 +194,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </h1>
            </div>
           <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" onClick={() => setIsSettingsOpen(true)} title="Settings">
-              <Settings size={18} />
-              <span className="sr-only">Settings</span>
+            <Button asChild variant="ghost" size="icon" title="Settings">
+                <Link href="/settings">
+                  <Settings size={18} />
+                  <span className="sr-only">Settings</span>
+                </Link>
             </Button>
             <ThemeToggle />
           </div>
@@ -208,16 +208,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           {childrenWithProps}
         </main>
       </SidebarInset>
-
-      <SettingsDialog
-        isOpen={isSettingsOpen}
-        onOpenChange={setIsSettingsOpen}
-        systemPrompt={systemPrompt}
-        onSystemPromptChange={setSystemPrompt}
-        onModelsUpdate={handleRefresh}
-        onRagUpdate={handleRefresh}
-        connectionMode={connectionMode}
-      />
     </SidebarProvider>
   );
 }

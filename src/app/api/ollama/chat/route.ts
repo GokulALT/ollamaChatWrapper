@@ -85,10 +85,14 @@ async function* OllamaStreamTransformer(stream: ReadableStream<Uint8Array>): Asy
 }
 
 export async function POST(req: NextRequest) {
-  const ollamaBaseUrl = process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
+  const baseUrl = req.headers.get('X-Ollama-Url') || process.env.OLLAMA_BASE_URL;
+
   try {
     const { model, messages, system, connectionMode } = (await req.json()) as { model: string; messages: ChatMessageData[]; system?: string; connectionMode: 'mcp' | 'direct' };
-
+    
+    if (!baseUrl) {
+      return new Response(JSON.stringify({ error: `URL for ${connectionMode.toUpperCase()} mode is not configured` }), { status: 400, headers: { 'Content-Type': 'application/json' } });
+    }
     if (!model || !messages) {
       return new Response(JSON.stringify({ error: 'Missing model or messages in request body' }), { status: 400, headers: { 'Content-Type': 'application/json' } });
     }
@@ -107,7 +111,7 @@ export async function POST(req: NextRequest) {
     let responseStreamTransformer: (stream: ReadableStream<Uint8Array>) => AsyncIterable<string>;
 
     if (connectionMode === 'mcp') {
-      apiEndpoint = `${ollamaBaseUrl}/v1/chat/completions`;
+      apiEndpoint = `${baseUrl}/v1/chat/completions`;
       requestBody = {
         model: model,
         messages: apiMessages,
@@ -115,7 +119,7 @@ export async function POST(req: NextRequest) {
       };
       responseStreamTransformer = OpenAIStreamTransformer;
     } else { // Direct Mode
-      apiEndpoint = `${ollamaBaseUrl}/api/chat`;
+      apiEndpoint = `${baseUrl}/api/chat`;
       // Direct Ollama uses a different body structure
       const directMessages = messages.map(m => ({
         role: m.sender === 'ai' ? 'assistant' : 'user',

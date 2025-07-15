@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/sidebar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Database, AlertTriangle } from 'lucide-react';
+import { getChromaUrl } from '@/lib/config';
 
 interface Collection {
   id: string;
@@ -34,7 +35,9 @@ export function CollectionSelector({ selectedCollection, onSelectCollection, ref
       setIsLoading(true);
       setError(null);
       try {
-        const response = await fetch(`/api/rag/collections`);
+        const response = await fetch(`/api/rag/collections`, {
+          headers: { 'X-Chroma-Url': getChromaUrl() }
+        });
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
           throw new Error(errorData.error || `Failed to fetch: ${response.statusText}`);

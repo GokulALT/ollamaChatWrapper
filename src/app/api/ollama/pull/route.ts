@@ -4,7 +4,11 @@ import { type NextRequest } from 'next/server';
 export const runtime = 'edge';
 
 export async function POST(req: NextRequest) {
-  const ollamaBaseUrl = process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
+  const baseUrl = req.headers.get('X-Ollama-Url') || process.env.OLLAMA_BASE_URL;
+  if (!baseUrl) {
+    return new Response('Ollama URL is not configured.', { status: 400 });
+  }
+  
   try {
     const body = await req.json();
     const modelName = body.name;
@@ -13,7 +17,7 @@ export async function POST(req: NextRequest) {
       return new Response('Model name is required', { status: 400 });
     }
 
-    const response = await fetch(`${ollamaBaseUrl}/api/pull`, {
+    const response = await fetch(`${baseUrl}/api/pull`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

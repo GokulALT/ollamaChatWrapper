@@ -5,6 +5,7 @@ import React, { useState, useEffect } from 'react';
 import { Database, CheckCircle2, WifiOff, Loader2 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { getChromaUrl } from '@/lib/config';
 
 interface StatusState {
   online: boolean | null; // null for initial loading state
@@ -22,7 +23,15 @@ export function RagStatus() {
     const fetchStatus = async () => {
       setIsLoading(true);
       try {
-        const response = await fetch(`/api/rag/status`);
+        const chromaUrl = getChromaUrl();
+        if (!chromaUrl) {
+           setStatus({ online: false, message: 'URL not configured.' });
+           return;
+        }
+
+        const response = await fetch(`/api/rag/status`, {
+          headers: { 'X-Chroma-Url': chromaUrl }
+        });
         const data = await response.json();
         setStatus({
           online: data.online,

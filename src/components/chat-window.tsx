@@ -10,6 +10,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Send, AlertTriangle, Loader2, MessageSquare, BrainCircuit } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from "@/hooks/use-toast";
+import { getOllamaUrl, getMcpUrl, getChromaUrl } from '@/lib/config';
 
 interface ChatWindowProps {
   selectedModel: string | null;
@@ -53,9 +54,13 @@ export function ChatWindow({ selectedModel, connectionMode, newChatKey, systemPr
   }, [newChatKey, connectionMode]);
 
   const handleMcpDirectChat = async (newMessages: ChatMessageData[]) => {
+     const baseUrl = connectionMode === 'mcp' ? getMcpUrl() : getOllamaUrl();
      const response = await fetch('/api/ollama/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-Ollama-Url': baseUrl,
+        },
         body: JSON.stringify({
           model: selectedModel,
           messages: newMessages.map(m => ({ sender: m.sender, text: m.text })), 
@@ -92,7 +97,11 @@ export function ChatWindow({ selectedModel, connectionMode, newChatKey, systemPr
   const handleRagChat = async (newMessages: ChatMessageData[]) => {
       const response = await fetch('/api/rag/chat', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-Ollama-Url': getOllamaUrl(),
+          'X-Chroma-Url': getChromaUrl(),
+        },
         body: JSON.stringify({
           model: selectedModel,
           collection: selectedCollection,

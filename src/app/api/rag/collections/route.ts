@@ -3,8 +3,10 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { ChromaClient, type ChromaClientParams } from 'chromadb';
 
 // Helper function to get ChromaClient with authentication support
-function getChromaClient() {
-    const chromaUrl = process.env.CHROMA_URL || 'http://localhost:8000';
+function getChromaClient(req: NextRequest) {
+    const chromaUrl = req.headers.get('X-Chroma-Url') || process.env.CHROMA_URL;
+    if (!chromaUrl) return null;
+    
     const authMethod = process.env.CHROMA_AUTH_METHOD;
     const token = process.env.CHROMA_TOKEN;
     const username = process.env.CHROMA_USERNAME;
@@ -23,17 +25,17 @@ function getChromaClient() {
 
 
 export async function GET(req: NextRequest) {
+    const chroma = getChromaClient(req);
+    if (!chroma) {
+        return NextResponse.json({ error: 'ChromaDB URL is not configured.' }, { status: 500 });
+    }
     try {
-        const chroma = getChromaClient();
         const collections = await chroma.listCollections();
 
-        // The `chromadb` library is expected to return Collection objects, but in some environments
-        // it may return an array of strings. We format the response to what the frontend expects: { id: string, name: string }[]
         const formattedCollections = collections.map((c: any) => {
             if (typeof c === 'string') {
-                return { id: c, name: c }; // Handle if the API unexpectedly returns strings
+                return { id: c, name: c };
             }
-            // This is the expected path according to the library's types
             return { id: c.id, name: c.name };
         });
 
@@ -45,17 +47,19 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+    const chroma = getChromaClient(req);
+    if (!chroma) {
+        return NextResponse.json({ error: 'ChromaDB URL is not configured.' }, { status: 400 });
+    }
     try {
         const { name } = await req.json();
         if (!name) {
             return NextResponse.json({ error: 'Collection name is required' }, { status: 400 });
         }
-        const chroma = getChromaClient();
         const collection = await chroma.createCollection({ name });
         return NextResponse.json(collection);
     } catch (error: any) {
         console.error('Error creating collection:', error);
-        // ChromaDB-ts might throw an error with a specific message for duplicates
         if (error.message && error.message.includes('already exists')) {
             return NextResponse.json({ error: `Collection '${error.message.split("'")[1]}' already exists.` }, { status: 409 });
         }
@@ -64,6 +68,10 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
+    const chroma = getChromaClient(req);
+    if (!chroma) {
+        return NextResponse.json({ error: 'ChromaDB URL is not configured.' }, { status: 400 });
+    }
     const { searchParams } = new URL(req.url);
     const name = searchParams.get('name');
 
@@ -71,7 +79,6 @@ export async function DELETE(req: NextRequest) {
         if (!name) {
             return NextResponse.json({ error: 'Collection name is required' }, { status: 400 });
         }
-        const chroma = getChromaClient();
         await chroma.deleteCollection({ name });
         return NextResponse.json({ message: `Collection "${name}" deleted.` });
     } catch (error: any) {

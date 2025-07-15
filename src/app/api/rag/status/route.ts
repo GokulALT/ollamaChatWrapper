@@ -3,8 +3,10 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { ChromaClient, type ChromaClientParams } from 'chromadb';
 
 // Helper function to get ChromaClient with authentication support
-function getChromaClient() {
-    const chromaUrl = process.env.CHROMA_URL || 'http://localhost:8000';
+function getChromaClient(req: NextRequest) {
+    const chromaUrl = req.headers.get('X-Chroma-Url') || process.env.CHROMA_URL;
+    if (!chromaUrl) return null;
+
     const authMethod = process.env.CHROMA_AUTH_METHOD;
     const token = process.env.CHROMA_TOKEN;
     const username = process.env.CHROMA_USERNAME;
@@ -22,8 +24,12 @@ function getChromaClient() {
 }
 
 export async function GET(req: NextRequest) {
+    const client = getChromaClient(req);
+    if (!client) {
+        return NextResponse.json({ online: false, message: 'ChromaDB URL is not configured.' }, { status: 200 });
+    }
+
     try {
-        const client = getChromaClient();
         // The heartbeat is a lightweight way to check for a connection.
         await client.heartbeat();
         return NextResponse.json({ online: true, message: 'Connection successful.' });

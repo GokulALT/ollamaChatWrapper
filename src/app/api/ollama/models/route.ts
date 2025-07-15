@@ -2,13 +2,17 @@
 import { type NextRequest, NextResponse } from 'next/server';
 
 export async function GET(req: NextRequest) {
-  const ollamaBaseUrl = process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
+  const baseUrl = req.headers.get('X-Ollama-Url') || process.env.OLLAMA_BASE_URL;
   const mode = req.nextUrl.searchParams.get('mode') || 'mcp';
+  
+  if (!baseUrl) {
+    return NextResponse.json({ error: `URL for ${mode.toUpperCase()} is not configured.` }, { status: 500 });
+  }
 
   try {
     if (mode === 'mcp') {
       // MCP exposes an OpenAI-compatible /v1/models endpoint
-      const response = await fetch(`${ollamaBaseUrl}/v1/models`);
+      const response = await fetch(`${baseUrl}/v1/models`);
       if (!response.ok) {
         const errorBody = await response.text();
         console.error(`MCP API error: ${response.status} ${response.statusText}`, errorBody);
@@ -22,7 +26,7 @@ export async function GET(req: NextRequest) {
       }));
       return NextResponse.json(models);
     } else { // Direct Mode
-      const response = await fetch(`${ollamaBaseUrl}/api/tags`);
+      const response = await fetch(`${baseUrl}/api/tags`);
       if (!response.ok) {
         const errorBody = await response.text();
         console.error(`Ollama API error: ${response.status} ${response.statusText}`, errorBody);
