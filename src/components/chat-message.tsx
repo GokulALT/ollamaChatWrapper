@@ -1,11 +1,12 @@
 
 "use client";
 
+import { useState } from 'react';
 import type { ChatMessageData } from '@/types/chat';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { User, Bot, BookCopy } from 'lucide-react';
+import { User, Bot, BookCopy, Clipboard, Check } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import {
   Accordion,
@@ -14,6 +15,9 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { ScrollArea } from './ui/scroll-area';
+import { Button } from './ui/button';
+import { useToast } from '@/hooks/use-toast';
+
 
 interface ChatMessageProps {
   message: ChatMessageData;
@@ -21,6 +25,27 @@ interface ChatMessageProps {
 
 export function ChatMessage({ message }: ChatMessageProps) {
   const isUser = message.sender === 'user';
+  const { toast } = useToast();
+  const [copiedStates, setCopiedStates] = useState<Record<number, boolean>>({});
+
+  const handleCopy = (textToCopy: string, index: number) => {
+    navigator.clipboard.writeText(textToCopy).then(() => {
+      setCopiedStates(prev => ({ ...prev, [index]: true }));
+      setTimeout(() => {
+        setCopiedStates(prev => ({ ...prev, [index]: false }));
+      }, 2000);
+      toast({
+        description: "Code copied to clipboard.",
+      });
+    }, (err) => {
+      console.error('Could not copy text: ', err);
+      toast({
+        variant: "destructive",
+        title: "Copy Failed",
+        description: "Could not copy code to clipboard.",
+      });
+    });
+  };
 
   return (
     <div
@@ -52,17 +77,36 @@ export function ChatMessage({ message }: ChatMessageProps) {
               ol: ({node, ...props}) => <ol className="list-decimal list-inside my-1" {...props} />,
               li: ({node, ...props}) => <li className="mb-0.5" {...props} />,
               p: ({node, ...props}) => <p className="mb-1" {...props} />,
+              pre: ({node, ...props}) => <pre className="bg-muted p-2 rounded-md overflow-x-auto text-xs my-1" {...props} />,
               code: ({node, inline, className, children, ...props}) => {
-                const match = /language-(\w+)/.exec(className || '')
+                const match = /language-(\w+)/.exec(className || '');
+                const codeText = String(children).replace(/\n$/, '');
+                const codeIndex = React.useId();
+
                 return !inline && match ? (
-                  <pre className={cn(className, 'bg-muted p-2 rounded-md overflow-x-auto text-xs my-1')} {...props}>
-                    <code>{children}</code>
-                  </pre>
+                  <div className="relative group">
+                    <pre className={cn(className, 'bg-muted p-2 rounded-md overflow-x-auto text-xs my-1 pt-8')} {...props}>
+                      <code>{children}</code>
+                    </pre>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                      onClick={() => handleCopy(codeText, Number(codeIndex.replace(/:/g, '')))}
+                    >
+                      {copiedStates[Number(codeIndex.replace(/:/g, ''))] ? (
+                        <Check size={14} className="text-green-500" />
+                      ) : (
+                        <Clipboard size={14} />
+                      )}
+                      <span className="sr-only">Copy code</span>
+                    </Button>
+                  </div>
                 ) : (
                   <code className={cn(className, 'bg-muted px-1 py-0.5 rounded text-xs')} {...props}>
                     {children}
                   </code>
-                )
+                );
               }
             }}
           >
