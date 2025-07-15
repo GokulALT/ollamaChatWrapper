@@ -69,67 +69,91 @@ In essence, MCP acts as a bridge, connecting AI models to the vast resources ava
 
 ## Setting Up a Local MCP Server
 
-Chat Studio is an MCP Client. To use its full potential (including tools), you'll need to run an MCP server locally. This server acts as a bridge between Chat Studio and your models/tools. There are two primary ways to run an MCP server:
+Chat Studio is an MCP Client. To use its full potential (including tools), you'll need to run an MCP server locally. This project includes two example TypeScript servers to demonstrate two different architectural approaches.
 
-### Option 1: Use the Included TypeScript Example Server (Recommended for simplicity)
+### Understanding the Two Example Servers
 
-This project includes a ready-to-run, all-in-one MCP server in the `mcp-server-standalone-example` folder. It's the perfect starting point and is configured to:
+1.  **Standalone Server (`mcp-server-standalone-example`)**:
+    *   **Purpose**: A simple, all-in-one server perfect for getting started quickly.
+    *   **Transport**: Uses `HttpServerTransport` to run on a network port (e.g., `http://localhost:8008`).
+    *   **How it Works**: You run it directly, and it provides both Ollama models and a simple `echo` tool in a single process. It does **not** use a config file. This is the easiest way to start with MCP.
+
+2.  **Orchestrated Tool Provider (`mcp-server-example`)**:
+    *   **Purpose**: A more advanced server designed to be a "tool" launched by a main orchestrator.
+    *   **Transport**: Uses `StdioServerTransport` to communicate with a parent process over standard I/O.
+    *   **How it Works**: You do **not** run this server directly. Instead, you run the pre-built `mcp-server` executable, which reads an `mcp_config.json` file and launches this server as a background process. This is the standard architecture for managing multiple tools, especially those written in different languages.
+
+---
+
+### Option 1: Run the Simple Standalone Server (Recommended for most users)
+
+The `mcp-server-standalone-example` folder contains a ready-to-run, all-in-one MCP server. It's the perfect starting point and is configured to:
 - Connect to your local **Ollama** instance.
 - Provide a simple `echo` tool.
 - Run on its own without needing any external configuration files.
 
 For detailed instructions, please see the [**README in that folder**](./mcp-server-standalone-example/README.md).
 
-### Option 2: Use the Pre-built Executable (Advanced orchestration)
+### Option 2: Run an Orchestrated Server with a Config File (Advanced)
 
-For advanced use cases, such as orchestrating multiple tool processes written in different languages (like Python or Go), you should use the pre-built `mcp-server` executable. This acts as a central **host** that launches and manages other tool servers based on a configuration file.
+For advanced use cases, such as orchestrating multiple tool processes written in different languages, you should use the pre-built `mcp-server` executable. This acts as a central **host** that launches and manages other tool servers based on a configuration file. The `mcp-server-example` in this project is designed to be one of these tools.
 
-This project also includes an example of a TypeScript **tool provider** in the `mcp-server-example` folder, which is designed to be launched by this executable.
+#### Step 1: Get the Host Executable
+Download the `mcp-server` executable for your operating system from the [**official MCP GitHub Releases**](https://github.com/model-context-protocol/mcp-server/releases). Place it in a convenient directory.
 
-1.  **Download the Executable**: Download the `mcp-server` executable for your operating system from the [**official MCP GitHub Releases**](https://github.com/model-context-protocol/mcp-server/releases).
+#### Step 2: Create a Configuration File
+In the same directory as the executable, create a file named `mcp_config.json`. This file tells the host which tools to launch. Below are two examples.
 
-2.  **Create a Configuration File**: Create a file named `mcp_config.json` in the same directory as the executable. This file tells the host server which tools to launch.
+**Example A: Launching the TypeScript Tool**
 
-3.  **Define Your Tools**: Populate the `mcp_config.json` file. The example below shows how to configure three different external tools: a Blender tool, a filesystem tool, and a custom Python weather tool.
+This is the simplest config to get started. It tells the host to launch the `mcp-server-example` from this project, which provides the `filesystem` and `echo` tools.
 
-    ```json
-    {
-      "mcpServers": {
-        "blender": {
-          "command": "uvx",
-          "args": [
-            "blender-mcp"
-          ]
-        },
-        "filesystem": {
-          "command": "npx",
-          "args": [
-            "-y",
-            "@modelcontextprotocol/server-filesystem",
-            "D:\\AI_FileSys"
-          ]
-        },
-        "My App": {
-          "command": "C:\\Users\\...\\Python310\\Scripts\\uv.EXE",
-          "args": [
-            "run",
-            "--with",
-            "mcp[cli]",
-            "mcp",
-            "run",
-            "D:\\AI_HF\\MCP Tools\\weatherMCP.py"
-          ]
-        }
-      }
+```json
+{
+  "mcpServers": {
+    "my-typescript-tools": {
+      "command": "npm",
+      "args": [
+        "start"
+      ],
+      "workingDir": "path/to/your/chat-studio/mcp-server-example"
     }
-    ```
+  }
+}
+```
+**Important:** You must replace `"path/to/your/chat-studio/mcp-server-example"` with the correct absolute or relative path to that directory on your machine.
 
-4.  **Run the Host Server**: Open a terminal, navigate to the directory containing your executable and config file, and run:
-    ```bash
-    ./mcp-server
-    ```
+**Example B: Launching a Python Tool**
 
-The host server will start, launch the tools defined in your config, and be ready to accept connections from Chat Studio. For more details, refer to the [official MCP Quickstart](https://modelcontextprotocol.io/quickstart/user).
+This example shows how to launch an external `stdio` tool, such as a Python script. This is the correct way to connect Chat Studio to a `stdio`-based server.
+
+```json
+{
+  "mcpServers": {
+    "my-python-tools": {
+      "command": "python3",
+      "args": [
+        "/path/to/your/python_mcp_server.py",
+        "--config",
+        "/path/to/your/python_config.json"
+      ],
+      "workingDir": "/path/to/your/python_project"
+    }
+  }
+}
+```
+*   `command`: The program to run (e.g., `python3`, `node`, or an executable).
+*   `args`: A list of arguments to pass to the command.
+*   `workingDir`: The directory to run the command in.
+
+#### Step 3: Run the Host Server
+Open a terminal, navigate to the directory containing your executable and `mcp_config.json` file, and run:
+```bash
+./mcp-server
+```
+The host server will start, launch the tools defined in your config, and be ready to accept connections from Chat Studio on its default port. For more details, refer to the [official MCP Quickstart](https://modelcontextprotocol.io/quickstart/user).
+
+---
 
 ## Getting Started with Chat Studio
 
