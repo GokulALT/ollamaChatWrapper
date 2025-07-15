@@ -88,7 +88,7 @@ export async function POST(req: NextRequest) {
   const baseUrl = req.headers.get('X-Ollama-Url') || process.env.OLLAMA_BASE_URL;
 
   try {
-    const { model, messages, system, connectionMode } = (await req.json()) as { model: string; messages: ChatMessageData[]; system?: string; connectionMode: 'mcp' | 'direct' };
+    const { model, messages, system, temperature, connectionMode } = (await req.json()) as { model: string; messages: ChatMessageData[]; system?: string; temperature?: number; connectionMode: 'mcp' | 'direct' };
     
     if (!baseUrl) {
       return new Response(JSON.stringify({ error: `URL for ${connectionMode.toUpperCase()} mode is not configured` }), { status: 400, headers: { 'Content-Type': 'application/json' } });
@@ -116,6 +116,7 @@ export async function POST(req: NextRequest) {
         model: model,
         messages: apiMessages,
         stream: true,
+        temperature: temperature,
       };
       responseStreamTransformer = OpenAIStreamTransformer;
     } else { // Direct Mode
@@ -131,6 +132,7 @@ export async function POST(req: NextRequest) {
         stream: true,
         options: {
           system: system,
+          temperature: temperature,
         }
       };
       responseStreamTransformer = OllamaStreamTransformer;

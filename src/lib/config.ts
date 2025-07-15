@@ -6,10 +6,12 @@
 const OLLAMA_URL_KEY = 'ollama_base_url';
 const MCP_URL_KEY = 'mcp_base_url';
 const CHROMA_URL_KEY = 'chroma_url';
+const TEMPERATURE_KEY = 'chat_temperature';
 
 const DEFAULT_OLLAMA_URL = 'http://localhost:11434';
 const DEFAULT_MCP_URL = 'http://localhost:8008';
 const DEFAULT_CHROMA_URL = 'http://localhost:8000';
+const DEFAULT_TEMPERATURE = 0.8;
 
 // Universal getter
 const getConfig = (key: string, defaultValue: string): string => {
@@ -43,3 +45,14 @@ export const setMcpUrl = (url: string) => setConfig(MCP_URL_KEY, url);
 // --- ChromaDB URL (for RAG Mode) ---
 export const getChromaUrl = () => getConfig(CHROMA_URL_KEY, DEFAULT_CHROMA_URL);
 export const setChromaUrl = (url: string) => setConfig(CHROMA_URL_KEY, url);
+
+// --- Chat Temperature ---
+export const getTemperature = (): number => {
+    try {
+        const storedValue = localStorage.getItem(TEMPERATURE_KEY);
+        return storedValue ? parseFloat(storedValue) : DEFAULT_TEMPERATURE;
+    } catch (error) {
+        return DEFAULT_TEMPERATURE;
+    }
+};
+export const setTemperature = (temp: number) => setConfig(TEMPERATURE_KEY, temp.toString());

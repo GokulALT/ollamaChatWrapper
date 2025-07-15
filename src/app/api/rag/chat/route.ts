@@ -69,11 +69,12 @@ export async function POST(req: NextRequest) {
     }
     
     try {
-        const { model, messages, collection: collectionName, system } = (await req.json()) as {
+        const { model, messages, collection: collectionName, system, temperature } = (await req.json()) as {
             model: string;
             messages: ChatMessageData[];
             collection: string;
             system?: string;
+            temperature?: number;
         };
         
         if (!collectionName) {
@@ -135,6 +136,9 @@ ${contextText}
                 model: model,
                 messages: apiMessages,
                 stream: true,
+                options: {
+                    temperature: temperature,
+                }
             }),
         });
 

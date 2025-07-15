@@ -7,10 +7,10 @@ import { ChatMessage } from '@/components/chat-message';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Send, AlertTriangle, Loader2, MessageSquare, BrainCircuit } from 'lucide-react';
+import { Send, Loader2, MessageSquare, BrainCircuit } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from "@/hooks/use-toast";
-import { getOllamaUrl, getMcpUrl, getChromaUrl } from '@/lib/config';
+import { getOllamaUrl, getMcpUrl, getChromaUrl, getTemperature } from '@/lib/config';
 
 interface ChatWindowProps {
   selectedModel: string | null;
@@ -55,6 +55,7 @@ export function ChatWindow({ selectedModel, connectionMode, newChatKey, systemPr
 
   const handleMcpDirectChat = async (newMessages: ChatMessageData[]) => {
      const baseUrl = connectionMode === 'mcp' ? getMcpUrl() : getOllamaUrl();
+     const temperature = getTemperature();
      const response = await fetch('/api/ollama/chat', {
         method: 'POST',
         headers: { 
@@ -65,6 +66,7 @@ export function ChatWindow({ selectedModel, connectionMode, newChatKey, systemPr
           model: selectedModel,
           messages: newMessages.map(m => ({ sender: m.sender, text: m.text })), 
           system: systemPrompt,
+          temperature,
           connectionMode: connectionMode,
         }),
         signal: abortControllerRef.current!.signal,
@@ -95,6 +97,7 @@ export function ChatWindow({ selectedModel, connectionMode, newChatKey, systemPr
   };
 
   const handleRagChat = async (newMessages: ChatMessageData[]) => {
+      const temperature = getTemperature();
       const response = await fetch('/api/rag/chat', {
         method: 'POST',
         headers: { 
@@ -107,6 +110,7 @@ export function ChatWindow({ selectedModel, connectionMode, newChatKey, systemPr
           collection: selectedCollection,
           messages: newMessages.map(m => ({ sender: m.sender, text: m.text })),
           system: systemPrompt,
+          temperature,
         }),
         signal: abortControllerRef.current!.signal,
       });

@@ -22,7 +22,8 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { getOllamaUrl, setOllamaUrl, getMcpUrl, setMcpUrl, getChromaUrl, setChromaUrl } from '@/lib/config';
+import { getOllamaUrl, setOllamaUrl, getMcpUrl, setMcpUrl, getChromaUrl, setChromaUrl, getTemperature, setTemperature } from '@/lib/config';
+import { Slider } from '@/components/ui/slider';
 
 
 interface Model {
@@ -357,6 +358,7 @@ export default function SettingsPage() {
     const [connectionMode, setConnectionMode] = useState<ConnectionMode>('direct');
     const [systemPrompt, setSystemPrompt] = useState('');
     const [activeTab, setActiveTab] = useState("general");
+    const [temperature, setTemperatureState] = useState<number>(0.8);
     
     // State for connection URLs
     const [ollamaUrl, setOllamaUrlState] = useState('');
@@ -378,6 +380,7 @@ export default function SettingsPage() {
             setOllamaUrlState(getOllamaUrl());
             setMcpUrlState(getMcpUrl());
             setChromaUrlState(getChromaUrl());
+            setTemperatureState(getTemperature());
 
         } catch (error) {
             console.warn("Could not access localStorage.");
@@ -391,6 +394,12 @@ export default function SettingsPage() {
         } catch (error) {
             console.warn("Could not access localStorage to set system prompt.");
         }
+    };
+    
+    const handleTemperatureChange = (value: number[]) => {
+        const newTemp = value[0];
+        setTemperatureState(newTemp);
+        setTemperature(newTemp);
     };
 
     const handleConnectionModeChange = (mode: ConnectionMode) => {
@@ -454,6 +463,23 @@ export default function SettingsPage() {
                                     </RadioGroup>
                                     <p className="text-sm text-muted-foreground pt-1">
                                         Choose how to connect to your language models.
+                                    </p>
+                                </div>
+                                <div className="space-y-2">
+                                    <div className="flex justify-between items-center">
+                                        <Label htmlFor="temperature">Temperature</Label>
+                                        <span className="text-sm text-muted-foreground font-mono">{temperature.toFixed(2)}</span>
+                                    </div>
+                                    <Slider
+                                        id="temperature"
+                                        min={0}
+                                        max={2}
+                                        step={0.01}
+                                        value={[temperature]}
+                                        onValueChange={handleTemperatureChange}
+                                    />
+                                    <p className="text-sm text-muted-foreground pt-1">
+                                        Controls randomness. Lower values are more focused, higher values are more creative.
                                     </p>
                                 </div>
                                 <div className="space-y-2 flex-grow flex flex-col">
