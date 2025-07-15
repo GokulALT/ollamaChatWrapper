@@ -337,11 +337,11 @@ function RagManager() {
             <Card>
                 <CardHeader>
                     <CardTitle className="text-base">Upload Document to Database</CardTitle>
-                    <CardDescription>Upload a .txt or .docx file to the selected database to be embedded.</CardDescription>
+                    <CardDescription>Upload a .txt,.html,.ts,.scss,.css,.json file to the selected database to be embedded.</CardDescription>
                 </CardHeader>
                 <CardContent>
                      <form onSubmit={handleFileUpload} className="flex items-center gap-2">
-                        <Input id="file-upload" type="file" accept=".txt,.docx" onChange={e => setFile(e.target.files ? e.target.files[0] : null)} disabled={isUploading || !selectedCollection} />
+                        <Input id="file-upload" type="file" accept=".txt,.html,.ts,.scss,.css,.json" onChange={e => setFile(e.target.files ? e.target.files[0] : null)} disabled={isUploading || !selectedCollection} />
                         <Button type="submit" size="icon" disabled={isUploading || !file || !selectedCollection}>
                             {isUploading ? <Loader2 className="animate-spin" /> : <Upload size={18} />}
                         </Button>

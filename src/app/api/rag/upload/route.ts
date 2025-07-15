@@ -90,15 +90,16 @@ export async function POST(req: NextRequest) {
         }
         
         let text = '';
-        if (file.type === 'text/plain') {
+        if (file.type ) {
             text = await file.text();
-        } else if (file.type === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+        } else  {
             const arrayBuffer = await file.arrayBuffer();
             const result = await mammoth.extractRawText({ arrayBuffer });
             text = result.value;
-        } else {
-             return NextResponse.json({ error: 'Only .txt and .docx files are supported.' }, { status: 400 });
-        }
+        } 
+        // else {
+        //      return NextResponse.json({ error: 'Only .txt and .docx files are supported.' }, { status: 400 });
+        // }
 
         if (!text.trim()) {
             return NextResponse.json({ error: 'The document appears to be empty.' }, { status: 400 });
