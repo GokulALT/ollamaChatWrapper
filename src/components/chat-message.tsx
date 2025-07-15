@@ -6,7 +6,7 @@ import type { ChatMessageData } from '@/types/chat';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Card, CardContent } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
-import { User, Bot, BookCopy, Clipboard, Check, Eye } from 'lucide-react';
+import { User, Bot, BookCopy, Clipboard, Check, Eye, Download } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import {
   Accordion,
@@ -46,6 +46,36 @@ export function ChatMessage({ message }: ChatMessageProps) {
     });
   };
 
+  const handleSave = (codeText: string, lang: string) => {
+    const extension = lang || 'txt';
+    const suggestedFilename = `snippet-${Date.now()}.${extension}`;
+    const filename = window.prompt("Enter filename:", suggestedFilename);
+
+    if (filename) {
+      try {
+        const blob = new Blob([codeText], { type: 'text/plain;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        toast({
+          description: `File "${filename}" saved successfully.`,
+        });
+      } catch (error) {
+        console.error("Failed to save file:", error);
+        toast({
+          variant: "destructive",
+          title: "Save Failed",
+          description: "Could not save the file.",
+        });
+      }
+    }
+  };
+
   const CodeRenderer = ({ node, inline, className, children, ...props }: any) => {
     const [showPreview, setShowPreview] = useState(false);
     const codeText = String(children).replace(/\n$/, '');
@@ -72,6 +102,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
               variant="ghost"
               className="h-6 w-6"
               onClick={() => setShowPreview(!showPreview)}
+              title={showPreview ? "Hide Preview" : "Show Preview"}
             >
               <Eye size={14} />
               <span className="sr-only">Toggle Preview</span>
@@ -81,7 +112,18 @@ export function ChatMessage({ message }: ChatMessageProps) {
             size="icon"
             variant="ghost"
             className="h-6 w-6"
+            onClick={() => handleSave(codeText, lang)}
+            title="Save to file"
+          >
+            <Download size={14} />
+            <span className="sr-only">Save code to file</span>
+          </Button>
+          <Button
+            size="icon"
+            variant="ghost"
+            className="h-6 w-6"
             onClick={() => handleCopy(codeText, codeId)}
+            title="Copy code"
           >
             {copiedStates[codeId] ? (
               <Check size={14} className="text-green-500" />
