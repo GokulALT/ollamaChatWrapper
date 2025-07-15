@@ -17,6 +17,7 @@ import {
 import { ScrollArea } from './ui/scroll-area';
 import { Button } from './ui/button';
 import { useToast } from '@/hooks/use-toast';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 
 interface ChatMessageProps {
@@ -26,13 +27,13 @@ interface ChatMessageProps {
 export function ChatMessage({ message }: ChatMessageProps) {
   const isUser = message.sender === 'user';
   const { toast } = useToast();
-  const [copiedStates, setCopiedStates] = useState<Record<number, boolean>>({});
+  const [copiedStates, setCopiedStates] = useState<Record<string, boolean>>({});
 
-  const handleCopy = (textToCopy: string, index: number) => {
+  const handleCopy = (textToCopy: string, id: string) => {
     navigator.clipboard.writeText(textToCopy).then(() => {
-      setCopiedStates(prev => ({ ...prev, [index]: true }));
+      setCopiedStates(prev => ({ ...prev, [id]: true }));
       setTimeout(() => {
-        setCopiedStates(prev => ({ ...prev, [index]: false }));
+        setCopiedStates(prev => ({ ...prev, [id]: false }));
       }, 2000);
       toast({
         description: "Code copied to clipboard.",
@@ -63,7 +64,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
       )}
       <Card
         className={cn(
-          'max-w-xs sm:max-w-md md:max-w-lg rounded-xl shadow-sm',
+          'max-w-xs sm:max-w-md md:max-w-lg lg:max-w-xl rounded-xl shadow-sm',
           isUser ? 'bg-primary text-primary-foreground' : 'bg-card text-card-foreground'
         )}
       >
@@ -81,20 +82,60 @@ export function ChatMessage({ message }: ChatMessageProps) {
               code: ({node, inline, className, children, ...props}) => {
                 const match = /language-(\w+)/.exec(className || '');
                 const codeText = String(children).replace(/\n$/, '');
-                const codeIndex = React.useId();
+                const codeId = React.useId();
+                const lang = match ? match[1] : '';
+
+                if (lang === 'html' && !inline) {
+                   return (
+                      <Tabs defaultValue="preview" className="my-2 rounded-md border">
+                        <TabsList className="grid w-full grid-cols-2">
+                          <TabsTrigger value="preview">Preview</TabsTrigger>
+                          <TabsTrigger value="code">Code</TabsTrigger>
+                        </TabsList>
+                        <TabsContent value="preview" className="p-0">
+                          <iframe
+                            srcDoc={codeText}
+                            className="w-full h-64 rounded-b-md bg-white"
+                            sandbox="allow-scripts allow-modals"
+                            title="HTML Preview"
+                          />
+                        </TabsContent>
+                        <TabsContent value="code" className="p-0">
+                          <div className="relative group">
+                             <pre className={cn(className, 'bg-muted p-2 rounded-b-md overflow-x-auto text-xs my-0 pt-8')} {...props}>
+                              <code>{children}</code>
+                            </pre>
+                             <Button
+                              size="icon"
+                              variant="ghost"
+                              className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
+                              onClick={() => handleCopy(codeText, codeId)}
+                            >
+                              {copiedStates[codeId] ? (
+                                <Check size={14} className="text-green-500" />
+                              ) : (
+                                <Clipboard size={14} />
+                              )}
+                              <span className="sr-only">Copy code</span>
+                            </Button>
+                          </div>
+                        </TabsContent>
+                      </Tabs>
+                   )
+                }
 
                 return !inline && match ? (
-                  <div className="relative group">
-                    <pre className={cn(className, 'bg-muted p-2 rounded-md overflow-x-auto text-xs my-1 pt-8')} {...props}>
+                  <div className="relative group my-2">
+                    <pre className={cn(className, 'bg-muted p-2 rounded-md overflow-x-auto text-xs pt-8')} {...props}>
                       <code>{children}</code>
                     </pre>
                     <Button
                       size="icon"
                       variant="ghost"
                       className="absolute top-1 right-1 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={() => handleCopy(codeText, Number(codeIndex.replace(/:/g, '')))}
+                      onClick={() => handleCopy(codeText, codeId)}
                     >
-                      {copiedStates[Number(codeIndex.replace(/:/g, ''))] ? (
+                      {copiedStates[codeId] ? (
                         <Check size={14} className="text-green-500" />
                       ) : (
                         <Clipboard size={14} />
