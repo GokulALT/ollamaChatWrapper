@@ -204,8 +204,9 @@ In addition to the standard chat modes, Chat Studio includes a powerful RAG mode
 
 1.  **Upload**: You upload `.txt` or `.docx` files to a "collection" in the RAG settings.
 2.  **Embed**: Chat Studio chunks the text, converts it into numerical representations (embeddings) using a local Ollama model (`nomic-embed-text`), and stores them in a ChromaDB vector database.
-3.  **Retrieve**: When you ask a question, the app embeds your query and searches ChromaDB for the most relevant chunks of text from your documents.
-4.  **Generate**: This retrieved context is then passed to your selected language model along with your question, allowing the AI to generate an answer based on the content of your documents.
+3.  **Retrieve**: When you ask a question, the app embeds your query and searches ChromaDB for a set of potentially relevant text chunks.
+4.  **Re-rank**: The app then uses your selected language model to analyze the retrieved chunks and re-rank them based on their direct relevance to your question.
+5.  **Generate**: The most relevant, re-ranked context is then passed to the language model along with your question, allowing the AI to generate an answer based on the most accurate information.
 
 ### RAG Data Flow Diagram
 
@@ -238,20 +239,15 @@ Here is a more detailed breakdown of the RAG system's architecture.
    v
 [Next.js API: /api/rag/chat]
    |
-   +--> 1. Embed User's Question
-   |      |
-   |      '-- (Request Embedding) --> [Ollama: nomic-embed-text]
-   |                                      |
-   |      '<-----------------------------'  (Receive Query Vector)
+   +--> 1. Embed User's Question --> [Ollama: nomic-embed-text]
    |
-   +--> 2. Query ChromaDB with Vector --> [ChromaDB]
-   |                                        |
-   |      '<-------------------------------'  (Receive Relevant Context Chunks)
+   +--> 2. Query ChromaDB for initial docs --> [ChromaDB]
    |
-   +--> 3. Construct Final Prompt:
-   |      (System Instructions + Context Chunks + Conversation History)
+   +--> 3. Re-rank docs for relevance --> [Ollama: LLM (e.g., llama3)]
    |
-   +--> 4. Send Final Prompt --> [Ollama: LLM (e.g., llama3)]
+   +--> 4. Construct Final Prompt with re-ranked context
+   |
+   +--> 5. Send Final Prompt --> [Ollama: LLM (e.g., llama3)]
    |                                |
    |      '<-----------------------'  (Receive AI-generated Answer)
    |

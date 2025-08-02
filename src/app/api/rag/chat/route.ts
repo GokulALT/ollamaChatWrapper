@@ -57,6 +57,80 @@ function getChromaClient(req: NextRequest) {
     return new ChromaClient(params);
 }
 
+// Function to call the LLM for re-ranking documents.
+async function rerankDocuments(
+  ollamaBaseUrl: string,
+  model: string,
+  query: string,
+  documents: { id: string; pageContent: string; metadata: any }[]
+): Promise<{ id: string; pageContent: string; metadata: any }[]> {
+  try {
+    const documentsString = documents
+      .map((doc, i) => `--- Document ${i} (ID: ${doc.id}) ---\n${doc.pageContent}`)
+      .join('\n');
+
+    const rerankPrompt = `You are a highly intelligent relevance-ranking assistant. Your task is to re-rank a list of retrieved documents based on their relevance to a user's query.
+
+User Query: "${query}"
+
+Documents to rank:
+${documentsString}
+
+Instructions:
+1. Carefully read the user query and each document.
+2. Determine which documents are most relevant to answering the query.
+3. Return a JSON object containing a single key "ranked_ids" with a value that is an array of the document IDs, sorted from most to least relevant.
+4. Only include IDs of documents that are clearly relevant. Do not include irrelevant documents.
+5. If no documents are relevant, return an empty array.
+6. Your response MUST be only the JSON object, with no other text or explanation.
+
+Example Response:
+{
+  "ranked_ids": ["doc-3-1", "doc-1-0", "doc-2-2"]
+}
+`;
+
+    const apiResponse = await fetch(`${ollamaBaseUrl}/api/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: model,
+        messages: [{ role: 'user', content: rerankPrompt }],
+        stream: false, // We need a single JSON response, not a stream
+        format: 'json', // Request JSON output from Ollama
+      }),
+    });
+
+    if (!apiResponse.ok) {
+        const errorBody = await apiResponse.text();
+        console.error("Re-ranking API call failed:", errorBody);
+        // Fallback to original document order if re-ranking fails
+        return documents;
+    }
+
+    const responseJson = await apiResponse.json();
+    const responseContent = JSON.parse(responseJson.message.content);
+    const rankedIds = responseContent.ranked_ids as string[];
+
+    if (!rankedIds || !Array.isArray(rankedIds)) {
+        console.warn("Re-ranking did not return a valid 'ranked_ids' array. Returning original order.");
+        return documents;
+    }
+
+    const rankedDocuments = rankedIds
+        .map(id => documents.find(doc => doc.id === id))
+        .filter(doc => doc !== undefined) as { id: string; pageContent: string; metadata: any }[];
+
+    // If re-ranking returns no relevant docs, use the top 2 from the original retrieval as a fallback
+    return rankedDocuments.length > 0 ? rankedDocuments : documents.slice(0, 2);
+
+  } catch (error) {
+    console.error("Error during re-ranking, returning original documents:", error);
+    // In case of any error during re-ranking, fall back to the original list.
+    return documents;
+  }
+}
+
 export async function POST(req: NextRequest) {
     const ollamaBaseUrl = req.headers.get('X-Ollama-Url') || process.env.OLLAMA_BASE_URL;
     if (!ollamaBaseUrl) {
@@ -89,24 +163,30 @@ export async function POST(req: NextRequest) {
 
         const latestQuery = messages[messages.length - 1].text;
 
-        // 1. Get relevant context from ChromaDB
+        // 1. Get initial set of documents from ChromaDB (fetch more to re-rank)
         const embedder = new OllamaEmbeddingFunction(ollamaBaseUrl, 'nomic-embed-text');
         
         const collection = await chroma.getCollection({ name: collectionName, embeddingFunction: embedder });
         const results = await collection.query({
             queryTexts: [latestQuery],
-            nResults: 5,
+            nResults: 10, // Fetch more results for re-ranking
         });
         
-        const contextDocs = results.documents[0].map((doc, i) => ({ 
+        const initialDocs = results.documents[0].map((doc, i) => ({ 
             id: results.ids[0][i], 
             pageContent: doc,
             metadata: results.metadatas[0][i] || {}
         }));
-        
-        const contextText = contextDocs.map(d => d.pageContent).join('\n---\n');
 
-        // 2. Construct prompt for the LLM, combining user's system prompt with RAG context
+        // 2. Re-rank documents using the LLM
+        const rerankedDocs = await rerankDocuments(ollamaBaseUrl, model, latestQuery, initialDocs);
+        
+        // Take the top 5 after re-ranking
+        const finalDocs = rerankedDocs.slice(0, 5);
+
+        const contextText = finalDocs.map(d => d.pageContent).join('\n---\n');
+
+        // 3. Construct prompt for the LLM, combining user's system prompt with RAG context
         const baseRagPrompt = `You are an expert question-answering assistant. Use the following retrieved context to answer the user's question. If the context doesn't contain the answer, state that you don't know. Do not use any other information.
 
 ---
@@ -128,7 +208,7 @@ ${contextText}
             ...userMessages
         ];
 
-        // 3. Call Ollama to generate a response
+        // 4. Call Ollama to generate a response
         const apiResponse = await fetch(`${ollamaBaseUrl}/api/chat`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -147,13 +227,13 @@ ${contextText}
             throw new Error(`Ollama API error: ${apiResponse.statusText} - ${errorBody}`);
         }
 
-        // 4. Stream the response back, prefixed with the sources
+        // 5. Stream the response back, prefixed with the sources
         const transformedStream = new ReadableStream({
             async start(controller) {
                 const encoder = new TextEncoder();
 
                 // First, send the sources as a JSON chunk
-                const sourcesPayload = JSON.stringify(contextDocs);
+                const sourcesPayload = JSON.stringify(finalDocs);
                 controller.enqueue(encoder.encode(sourcesPayload + RESPONSE_SEPARATOR));
 
                 // Then, stream the AI's response
