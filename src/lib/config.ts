@@ -16,6 +16,7 @@ const DEFAULT_TEMPERATURE = 0.8;
 // Universal getter
 const getConfig = (key: string, defaultValue: string): string => {
     try {
+        if (typeof window === 'undefined') return defaultValue;
         const storedValue = localStorage.getItem(key);
         // Return stored value if it's not null or an empty string, otherwise return default
         return storedValue || defaultValue;
@@ -28,6 +29,7 @@ const getConfig = (key: string, defaultValue: string): string => {
 // Universal setter
 const setConfig = (key: string, value: string): void => {
     try {
+         if (typeof window === 'undefined') return;
         localStorage.setItem(key, value.trim());
     } catch (error) {
         console.warn(`Could not save config to localStorage: ${key}`);
@@ -49,6 +51,7 @@ export const setChromaUrl = (url: string) => setConfig(CHROMA_URL_KEY, url);
 // --- Chat Temperature ---
 export const getTemperature = (): number => {
     try {
+        if (typeof window === 'undefined') return DEFAULT_TEMPERATURE;
         const storedValue = localStorage.getItem(TEMPERATURE_KEY);
         return storedValue ? parseFloat(storedValue) : DEFAULT_TEMPERATURE;
     } catch (error) {
