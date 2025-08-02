@@ -3,6 +3,7 @@
 
 import React, { useState, useRef, useEffect, FormEvent } from 'react';
 import type { ChatMessageData, Source, ConnectionMode } from '@/types/chat';
+import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
 import { ChatMessage } from '@/components/chat-message';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
@@ -53,75 +54,17 @@ export function ChatWindow({ selectedModel, connectionMode, newChatKey, systemPr
     setIsLoading(false);
   }, [newChatKey, connectionMode]);
 
-  const handleMcpDirectChat = async (newMessages: ChatMessageData[]) => {
-     const baseUrl = connectionMode === 'mcp' ? getMcpUrl() : getOllamaUrl();
-     const temperature = getTemperature();
-     const response = await fetch('/api/ollama/chat', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'X-Ollama-Url': baseUrl,
-        },
-        body: JSON.stringify({
-          model: selectedModel,
-          messages: newMessages.map(m => ({ sender: m.sender, text: m.text })), 
-          system: systemPrompt,
-          temperature,
-          connectionMode: connectionMode,
-        }),
-        signal: abortControllerRef.current!.signal,
-      });
+  const streamResponse = async (response: Response) => {
+    if (!response.ok || !response.body) {
+      const errorData = await response.json().catch(() => ({ error: "Unknown error occurred" }));
+      throw new Error(errorData.error || `API error: ${response.statusText}`);
+    }
 
-      if (!response.ok || !response.body) {
-        const errorData = await response.json().catch(() => ({ error: "Unknown error occurred"}));
-        throw new Error(errorData.error || `API error: ${response.statusText}`);
-      }
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let currentAiMessageId = Date.now().toString() + '-ai';
-      
-      setMessages((prevMessages) => [
-        ...prevMessages,
-        { id: currentAiMessageId, text: '', sender: 'ai', timestamp: new Date(), model: selectedModel },
-      ]);
-
-      let accumulatedResponse = '';
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        const chunk = decoder.decode(value, { stream: true });
-        accumulatedResponse += chunk;
-        setMessages((prev) => prev.map((msg) => msg.id === currentAiMessageId ? { ...msg, text: accumulatedResponse } : msg));
-      }
-  };
-
-  const handleRagChat = async (newMessages: ChatMessageData[]) => {
-      const temperature = getTemperature();
-      const response = await fetch('/api/rag/chat', {
-        method: 'POST',
-        headers: { 
-          'Content-Type': 'application/json',
-          'X-Ollama-Url': getOllamaUrl(),
-          'X-Chroma-Url': getChromaUrl(),
-        },
-        body: JSON.stringify({
-          model: selectedModel,
-          collection: selectedCollection,
-          messages: newMessages.map(m => ({ sender: m.sender, text: m.text })),
-          system: systemPrompt,
-          temperature,
-        }),
-        signal: abortControllerRef.current!.signal,
-      });
-
-      if (!response.ok || !response.body) {
-        const errorData = await response.json().catch(() => ({ error: "Unknown error occurred" }));
-        throw new Error(errorData.error || `API error: ${response.statusText}`);
-      }
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    
+    if (connectionMode === 'rag') {
+      // RAG mode has a special response format with sources first
       let accumulatedData = '';
       let sources: Source[] | null = null;
       let aiMessageStarted = false;
@@ -140,7 +83,6 @@ export function ChatWindow({ selectedModel, connectionMode, newChatKey, systemPr
             accumulatedData = parts.slice(1).join(RESPONSE_SEPARATOR);
           } catch (e) {
             console.error("Could not parse sources from stream:", e);
-            // In case of parsing error, treat the whole thing as text content
             sources = []; 
           }
         }
@@ -157,6 +99,25 @@ export function ChatWindow({ selectedModel, connectionMode, newChatKey, systemPr
           setMessages((prev) => prev.map((msg) => msg.id === currentAiMessageId ? { ...msg, text: accumulatedData } : msg));
         }
       }
+
+    } else {
+      // Direct and MCP mode streaming
+      let accumulatedResponse = '';
+      const currentAiMessageId = Date.now().toString() + '-ai';
+      
+      setMessages((prevMessages) => [
+        ...prevMessages,
+        { id: currentAiMessageId, text: '', sender: 'ai', timestamp: new Date(), model: selectedModel },
+      ]);
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        const chunk = decoder.decode(value, { stream: true });
+        accumulatedResponse += chunk;
+        setMessages((prev) => prev.map((msg) => msg.id === currentAiMessageId ? { ...msg, text: accumulatedResponse } : msg));
+      }
+    }
   };
 
   const sendMessage = async () => {
@@ -180,11 +141,33 @@ export function ChatWindow({ selectedModel, connectionMode, newChatKey, systemPr
     abortControllerRef.current = new AbortController();
 
     try {
-      if (connectionMode === 'rag') {
-        await handleRagChat(newMessages);
-      } else {
-        await handleMcpDirectChat(newMessages);
-      }
+      // Map our internal chat message format to OpenAI's format for the unified API
+      const apiMessages: ChatCompletionMessageParam[] = newMessages.map(msg => ({
+        role: msg.sender === 'user' ? 'user' : 'assistant',
+        content: msg.text,
+      }));
+
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 
+          'Content-Type': 'application/json',
+          'X-Ollama-Url': getOllamaUrl(),
+          'X-Mcp-Url': getMcpUrl(),
+          'X-Chroma-Url': getChromaUrl(),
+        },
+        body: JSON.stringify({
+          connectionMode,
+          model: selectedModel,
+          messages: apiMessages,
+          systemPrompt,
+          temperature: getTemperature(),
+          collection: selectedCollection,
+        }),
+        signal: abortControllerRef.current!.signal,
+      });
+
+      await streamResponse(response);
+
     } catch (err: any) {
       if (err.name === 'AbortError') {
         console.log('Fetch aborted.');
