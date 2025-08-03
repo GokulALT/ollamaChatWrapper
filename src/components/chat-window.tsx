@@ -73,7 +73,7 @@ export function ChatWindow({ selectedModel, connectionMode, newChatKey, systemPr
       
     setMessages((prevMessages) => [
       ...prevMessages,
-      { id: currentAiMessageId, text: '', sender: 'ai', timestamp: new Date(), model: selectedModel },
+      { id: currentAiMessageId, text: '', sender: 'ai', timestamp: new Date(), model: selectedModel, sources: [] },
     ]);
 
     while (true) {
@@ -81,7 +81,25 @@ export function ChatWindow({ selectedModel, connectionMode, newChatKey, systemPr
       if (done) break;
       const chunk = decoder.decode(value, { stream: true });
       accumulatedResponse += chunk;
-      setMessages((prev) => prev.map((msg) => msg.id === currentAiMessageId ? { ...msg, text: accumulatedResponse } : msg));
+
+      let sources: Source[] | undefined = undefined;
+      let responseText = accumulatedResponse;
+
+      if (connectionMode === 'rag' && accumulatedResponse.includes(RESPONSE_SEPARATOR)) {
+        const parts = accumulatedResponse.split(RESPONSE_SEPARATOR);
+        try {
+          sources = JSON.parse(parts[0]);
+        } catch (e) {
+            // It might be an incomplete JSON string, so we just wait for more data.
+        }
+        responseText = parts[1] || '';
+      }
+
+      setMessages((prev) => prev.map((msg) => 
+        msg.id === currentAiMessageId 
+          ? { ...msg, text: responseText, sources: sources || msg.sources } 
+          : msg
+      ));
     }
   };
 
@@ -108,7 +126,7 @@ export function ChatWindow({ selectedModel, connectionMode, newChatKey, systemPr
     try {
       // Map our internal chat message format to Genkit's format for the unified API
       const apiMessages: ChatMessage[] = newMessages.map(msg => ({
-        role: msg.sender,
+        role: msg.sender === 'ai' ? 'model' : 'user', // Use 'model' role for AI messages
         content: [{ text: msg.text }],
       }));
 
@@ -116,9 +134,6 @@ export function ChatWindow({ selectedModel, connectionMode, newChatKey, systemPr
         method: 'POST',
         headers: { 
           'Content-Type': 'application/json',
-          'X-Ollama-Url': getOllamaUrl(),
-          'X-Mcp-Url': getMcpUrl(),
-          'X-Chroma-Url': getChromaUrl(),
         },
         body: JSON.stringify({
           connectionMode,

@@ -3,6 +3,7 @@ import {type NextRequest, NextResponse} from 'next/server';
 import type {ChatMessage} from 'genkit';
 import {run} from 'genkit/flow';
 import {chat} from '@/ai/flows/chat';
+import {ragFlow} from '@/ai/flows/rag-flow';
 import type {ConnectionMode} from '@/types/chat';
 
 /**
@@ -119,39 +120,39 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (connectionMode === 'rag' && !collection) {
-        return NextResponse.json(
-          {error: 'RAG mode requires a `collection` parameter.'},
-          {status: 400}
-        );
-    }
-    
-    // Note: This is a temporary measure. The RAG logic will be migrated
-    // to a Genkit flow in a future step.
-    if (connectionMode === 'rag') {
-        return NextResponse.json(
-          {error: 'RAG mode is temporarily disabled for refactoring.'},
-          {status: 503}
-        );
-    }
-
-    const {stream, response} = await run(chat, {
+    let flowToRun;
+    let flowInput: any = {
       model,
       history: messages,
       systemPrompt: systemPrompt,
       temperature: temperature,
-    });
+    };
+
+    if (connectionMode === 'rag') {
+      if (!collection) {
+        return NextResponse.json(
+          {error: 'RAG mode requires a `collection` parameter.'},
+          {status: 400}
+        );
+      }
+      flowToRun = ragFlow;
+      flowInput.collection = collection;
+    } else {
+      flowToRun = chat;
+    }
+
+    const {stream, response} = await run(flowToRun, flowInput);
 
     const outputStream = new ReadableStream({
-        async start(controller) {
-            const encoder = new TextEncoder();
-            for await (const chunk of stream) {
-                if (chunk.output) {
-                    controller.enqueue(encoder.encode(chunk.output as string));
-                }
-            }
-            controller.close();
+      async start(controller) {
+        const encoder = new TextEncoder();
+        for await (const chunk of stream) {
+          if (chunk.output) {
+            controller.enqueue(encoder.encode(chunk.output as string));
+          }
         }
+        controller.close();
+      },
     });
 
     return new Response(outputStream, {
