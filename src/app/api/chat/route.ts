@@ -1,8 +1,8 @@
 
 import {type NextRequest, NextResponse} from 'next/server';
-import type {ChatCompletionMessageParam} from 'openai/resources/chat/completions';
-import {handleMcpDirectChat} from '@/lib/chat/mcp-direct';
-import {handleRagChat} from '@/lib/chat/rag';
+import type {ChatMessage} from 'genkit';
+import {run} from 'genkit/flow';
+import {chat} from '@/ai/flows/chat';
 import type {ConnectionMode} from '@/types/chat';
 
 /**
@@ -36,7 +36,7 @@ import type {ConnectionMode} from '@/types/chat';
  *               messages:
  *                 type: array
  *                 items:
- *                   $ref: '#/components/schemas/ChatCompletionMessageParam'
+ *                   $ref: '#/components/schemas/ChatMessage'
  *                 description: A list of messages comprising the conversation so far.
  *               systemPrompt:
  *                 type: string
@@ -69,7 +69,7 @@ import type {ConnectionMode} from '@/types/chat';
  *               $ref: '#/components/schemas/ErrorResponse'
  * components:
  *   schemas:
- *     ChatCompletionMessageParam:
+ *     ChatMessage:
  *       type: object
  *       required:
  *         - role
@@ -77,9 +77,14 @@ import type {ConnectionMode} from '@/types/chat';
  *       properties:
  *         role:
  *           type: string
- *           enum: [system, user, assistant]
+ *           enum: [system, user, assistant, tool]
  *         content:
- *           type: string
+ *           type: array
+ *           items:
+ *             type: object
+ *             properties:
+ *               text:
+ *                 type: string
  *     ErrorResponse:
  *       type: object
  *       properties:
@@ -100,7 +105,7 @@ export async function POST(req: NextRequest) {
     } = (await req.json()) as {
       connectionMode: ConnectionMode;
       model: string;
-      messages: ChatCompletionMessageParam[];
+      messages: ChatMessage[];
       systemPrompt?: string;
       temperature?: number;
       collection?: string;
@@ -114,44 +119,42 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    let responseStream: ReadableStream<Uint8Array>;
-
-    switch (connectionMode) {
-      case 'direct':
-      case 'mcp':
-        responseStream = await handleMcpDirectChat({
-          req,
-          model,
-          messages,
-          systemPrompt,
-          temperature,
-          connectionMode,
-        });
-        break;
-      case 'rag':
-        if (!collection) {
-          return NextResponse.json(
-            {error: 'RAG mode requires a `collection` parameter.'},
-            {status: 400}
-          );
-        }
-        responseStream = await handleRagChat({
-          req,
-          model,
-          collection,
-          messages,
-          systemPrompt,
-          temperature,
-        });
-        break;
-      default:
+    if (connectionMode === 'rag' && !collection) {
         return NextResponse.json(
-          {error: `Invalid connectionMode: ${connectionMode}`},
+          {error: 'RAG mode requires a `collection` parameter.'},
           {status: 400}
         );
     }
+    
+    // Note: This is a temporary measure. The RAG logic will be migrated
+    // to a Genkit flow in a future step.
+    if (connectionMode === 'rag') {
+        return NextResponse.json(
+          {error: 'RAG mode is temporarily disabled for refactoring.'},
+          {status: 503}
+        );
+    }
 
-    return new Response(responseStream, {
+    const {stream, response} = await run(chat, {
+      model,
+      history: messages,
+      systemPrompt: systemPrompt,
+      temperature: temperature,
+    });
+
+    const outputStream = new ReadableStream({
+        async start(controller) {
+            const encoder = new TextEncoder();
+            for await (const chunk of stream) {
+                if (chunk.output) {
+                    controller.enqueue(encoder.encode(chunk.output as string));
+                }
+            }
+            controller.close();
+        }
+    });
+
+    return new Response(outputStream, {
       headers: {
         'Content-Type': 'text/plain; charset=utf-8',
         'X-Content-Type-Options': 'nosniff',

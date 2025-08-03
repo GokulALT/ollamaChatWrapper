@@ -37,6 +37,17 @@ export function ModelSelector({ selectedModel, onSelectModel, refreshKey, connec
     const fetchItems = async () => {
       setIsLoading(true);
       setError(null);
+
+      // In direct mode, we now use Genkit and Gemini, so we don't need to fetch models.
+      if (connectionMode === 'direct') {
+        const geminiModel = { id: 'gemini-1.5-flash', name: 'gemini-1.5-flash' };
+        setModels([geminiModel]);
+        setTools([]);
+        onSelectModel(geminiModel.id);
+        setIsLoading(false);
+        return;
+      }
+
       try {
         const fetchMode = connectionMode === 'rag' ? 'direct' : connectionMode;
         const baseUrl = fetchMode === 'mcp' ? getMcpUrl() : getOllamaUrl();
