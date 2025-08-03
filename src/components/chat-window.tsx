@@ -11,7 +11,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Send, Loader2, MessageSquare, BrainCircuit } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from "@/hooks/use-toast";
-import { getOllamaUrl, getMcpUrl, getChromaUrl, getTemperature } from '@/lib/config';
+import { getOllamaUrl, getMcpUrl, getChromaUrl, getTemperature, getRerankEnabled } from '@/lib/config';
 
 interface ChatWindowProps {
   selectedModel: string | null;
@@ -62,61 +62,38 @@ export function ChatWindow({ selectedModel, connectionMode, newChatKey, systemPr
 
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
+    let accumulatedResponse = '';
+    const currentAiMessageId = Date.now().toString() + '-ai';
+    let sources: Source[] | undefined = undefined;
+    let sourcesReceived = false;
+
+    // For RAG, sources are sent first. For other modes, they are not.
+    const isRag = connectionMode === 'rag';
+
+    setMessages((prevMessages) => [
+      ...prevMessages,
+      { id: currentAiMessageId, text: '', sender: 'ai', timestamp: new Date(), model: selectedModel },
+    ]);
     
-    if (connectionMode === 'rag') {
-      // RAG mode has a special response format with sources first
-      let accumulatedData = '';
-      let sources: Source[] | null = null;
-      let aiMessageStarted = false;
-      const currentAiMessageId = Date.now().toString() + '-ai-rag';
-
-      while (true) {
+    while (true) {
         const { value, done } = await reader.read();
         if (done) break;
 
-        accumulatedData += decoder.decode(value, { stream: true });
+        accumulatedResponse += decoder.decode(value, { stream: true });
+
+        if (isRag && !sourcesReceived && accumulatedResponse.includes(RESPONSE_SEPARATOR)) {
+            const parts = accumulatedResponse.split(RESPONSE_SEPARATOR);
+            try {
+                sources = JSON.parse(parts[0]);
+                accumulatedResponse = parts.slice(1).join(RESPONSE_SEPARATOR);
+                sourcesReceived = true;
+            } catch (e) {
+                console.error("Could not parse sources from stream:", e);
+                // The first part wasn't sources, so treat it as part of the message
+            }
+        }
         
-        if (!sources && accumulatedData.includes(RESPONSE_SEPARATOR)) {
-          const parts = accumulatedData.split(RESPONSE_SEPARATOR);
-          try {
-            sources = JSON.parse(parts[0]);
-            accumulatedData = parts.slice(1).join(RESPONSE_SEPARATOR);
-          } catch (e) {
-            console.error("Could not parse sources from stream:", e);
-            sources = []; 
-          }
-        }
-
-        if (sources && !aiMessageStarted) {
-           setMessages((prev) => [
-            ...prev,
-            { id: currentAiMessageId, text: '', sender: 'ai', timestamp: new Date(), model: selectedModel, sources: sources || undefined },
-          ]);
-          aiMessageStarted = true;
-        }
-
-        if (aiMessageStarted) {
-          setMessages((prev) => prev.map((msg) => msg.id === currentAiMessageId ? { ...msg, text: accumulatedData } : msg));
-        }
-      }
-
-    } else {
-      // Direct and MCP mode streaming
-      let accumulatedResponse = '';
-      const currentAiMessageId = Date.now().toString() + '-ai';
-      
-      setMessages((prevMessages) => [
-        ...prevMessages,
-        { id: currentAiMessageId, text: '', sender: 'ai', timestamp: new Date(), model: selectedModel },
-      ]);
-
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-        const chunk = decoder.decode(value, { stream: true });
-        accumulatedResponse += chunk;
-        setMessages((prev) => prev.map((msg) => msg.id === currentAiMessageId ? { ...msg, text: accumulatedResponse } : msg));
-      }
+        setMessages((prev) => prev.map((msg) => msg.id === currentAiMessageId ? { ...msg, text: accumulatedResponse, sources } : msg));
     }
   };
 
@@ -147,6 +124,19 @@ export function ChatWindow({ selectedModel, connectionMode, newChatKey, systemPr
         content: msg.text,
       }));
 
+      const body: any = {
+        connectionMode,
+        model: selectedModel,
+        messages: apiMessages,
+        systemPrompt,
+        temperature: getTemperature(),
+      };
+
+      if (connectionMode === 'rag') {
+        body.collection = selectedCollection;
+        body.enableReranking = getRerankEnabled();
+      }
+
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 
@@ -155,14 +145,7 @@ export function ChatWindow({ selectedModel, connectionMode, newChatKey, systemPr
           'X-Mcp-Url': getMcpUrl(),
           'X-Chroma-Url': getChromaUrl(),
         },
-        body: JSON.stringify({
-          connectionMode,
-          model: selectedModel,
-          messages: apiMessages,
-          systemPrompt,
-          temperature: getTemperature(),
-          collection: selectedCollection,
-        }),
+        body: JSON.stringify(body),
         signal: abortControllerRef.current!.signal,
       });
 
@@ -276,3 +259,5 @@ export function ChatWindow({ selectedModel, connectionMode, newChatKey, systemPr
     </div>
   );
 }
+
+    

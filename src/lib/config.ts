@@ -7,13 +7,15 @@ const OLLAMA_URL_KEY = 'ollama_base_url';
 const MCP_URL_KEY = 'mcp_base_url';
 const CHROMA_URL_KEY = 'chroma_url';
 const TEMPERATURE_KEY = 'chat_temperature';
+const RAG_RERANK_ENABLED_KEY = 'rag_rerank_enabled';
 
 const DEFAULT_OLLAMA_URL = 'http://localhost:11434';
 const DEFAULT_MCP_URL = 'http://localhost:8008';
 const DEFAULT_CHROMA_URL = 'http://localhost:8000';
 const DEFAULT_TEMPERATURE = 0.8;
+const DEFAULT_RERANK_ENABLED = true;
 
-// Universal getter
+// Universal getter for string values
 const getConfig = (key: string, defaultValue: string): string => {
     try {
         if (typeof window === 'undefined') return defaultValue;
@@ -59,3 +61,18 @@ export const getTemperature = (): number => {
     }
 };
 export const setTemperature = (temp: number) => setConfig(TEMPERATURE_KEY, temp.toString());
+
+
+// --- RAG Re-ranking ---
+export const getRerankEnabled = (): boolean => {
+    try {
+        if (typeof window === 'undefined') return DEFAULT_RERANK_ENABLED;
+        const storedValue = localStorage.getItem(RAG_RERANK_ENABLED_KEY);
+        return storedValue ? JSON.parse(storedValue) : DEFAULT_RERANK_ENABLED;
+    } catch (error) {
+        return DEFAULT_RERANK_ENABLED;
+    }
+}
+export const setRerankEnabled = (enabled: boolean) => setConfig(RAG_RERANK_ENABLED_KEY, JSON.stringify(enabled));
+
+    

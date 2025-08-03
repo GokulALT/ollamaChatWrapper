@@ -22,13 +22,14 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { getOllamaUrl, setOllamaUrl, getMcpUrl, setMcpUrl, getChromaUrl, setChromaUrl, getTemperature, setTemperature } from '@/lib/config';
+import { getOllamaUrl, setOllamaUrl, getMcpUrl, setMcpUrl, getChromaUrl, setChromaUrl, getTemperature, setTemperature, getRerankEnabled, setRerankEnabled } from '@/lib/config';
 import { Slider } from '@/components/ui/slider';
+import { Switch } from '@/components/ui/switch';
 
 
 interface Model {
+    id: string;
     name: string;
-    size: number;
 }
 
 function DirectModelManager() {
@@ -156,7 +157,7 @@ function DirectModelManager() {
                     {isLoading ? ( <div className="flex justify-center items-center h-24"><Loader2 className="animate-spin" /></div> ) : (
                         <div className="p-2 space-y-1 rounded-md border">
                             {models.length > 0 ? models.map(model => (
-                                <div key={model.name} className="flex items-center justify-between p-2 rounded hover:bg-muted">
+                                <div key={model.id} className="flex items-center justify-between p-2 rounded hover:bg-muted">
                                     <span className="text-sm truncate">{model.name}</span>
                                     <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => handleDeleteModel(model.name)} disabled={!!deletingModel}>
                                         {deletingModel === model.name ? <Loader2 className="animate-spin" size={16} /> : <Trash2 size={16} />}
@@ -181,6 +182,7 @@ function RagManager() {
     const [isCreating, setIsCreating] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [isLoadingCollections, setIsLoadingCollections] = useState(true);
+    const [rerankEnabled, setRerankEnabledState] = useState(true);
 
     const fetchCollections = useCallback(async () => {
         setIsLoadingCollections(true);
@@ -200,6 +202,7 @@ function RagManager() {
 
     useEffect(() => {
         fetchCollections();
+        setRerankEnabledState(getRerankEnabled());
     }, [fetchCollections]);
 
     const handleCreateCollection = async (e: FormEvent) => {
@@ -287,6 +290,11 @@ function RagManager() {
         }
     };
 
+    const handleRerankChange = (checked: boolean) => {
+        setRerankEnabledState(checked);
+        setRerankEnabled(checked);
+    }
+
     return (
         <div className="space-y-4">
             <Alert>
@@ -301,6 +309,26 @@ function RagManager() {
                    You can configure the URLs for these services in the 'General' settings tab.
                 </AlertDescription>
             </Alert>
+            <Card>
+                 <CardHeader>
+                    <CardTitle className="text-base">RAG Configuration</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <Label htmlFor="rerank-switch" className="font-medium">Enable Re-ranking</Label>
+                            <p className="text-xs text-muted-foreground mt-1">
+                                Use the LLM to re-rank documents for relevance. Increases accuracy but adds latency.
+                            </p>
+                        </div>
+                        <Switch
+                            id="rerank-switch"
+                            checked={rerankEnabled}
+                            onCheckedChange={handleRerankChange}
+                        />
+                    </div>
+                </CardContent>
+            </Card>
             <Card>
                 <CardHeader>
                     <CardTitle className="text-base">Manage Databases (Collections)</CardTitle>
@@ -324,7 +352,7 @@ function RagManager() {
                                         <SelectValue placeholder={isLoadingCollections ? "Loading..." : "Select database"} />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {collections.map(c => <SelectItem key={c.name} value={c.name}>{c.name}</SelectItem>)}
+                                        {collections.map(c => <SelectItem key={c.id} value={c.name}>{c.name}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
                                 <Button variant="destructive" size="icon" onClick={handleDeleteCollection} disabled={isDeleting || !selectedCollection}>
@@ -544,3 +572,5 @@ export default function SettingsPage() {
         </div>
     );
 }
+
+    
