@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useState, useEffect } from 'react';
@@ -14,10 +15,13 @@ import {
   SidebarProvider,
   SidebarRail,
   SidebarTrigger,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { MessageSquare, FilePlus2, Settings } from 'lucide-react';
+import { MessageSquare, FilePlus2, Settings, Server, BrainCircuit, Bot } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { CollectionSelector } from '@/components/collection-selector';
 import type { ConnectionMode } from '@/types/chat';
@@ -89,6 +93,19 @@ export default function Home() {
     }
     return selectedModel ? `${selectedModel}` : 'Select a Model';
   }
+  
+  const handleModeChange = (mode: ConnectionMode) => {
+    setConnectionMode(mode);
+    setSelectedModel(null);
+    setSelectedCollection(null);
+    handleRefresh();
+    handleNewChat();
+    try {
+        localStorage.setItem('connection_mode', mode);
+    } catch (error) {
+        console.warn("Could not save connection mode to localStorage.");
+    }
+  }
 
   return (
     <SidebarProvider defaultOpen={true}>
@@ -115,6 +132,27 @@ export default function Home() {
           
           <Separator className="my-2 group-data-[collapsible=icon]:hidden" />
 
+          <SidebarMenu>
+             <SidebarMenuItem>
+                <SidebarMenuButton onClick={() => handleModeChange('direct')} isActive={connectionMode === 'direct'} tooltip={{ children: "Direct Mode" }}>
+                    <Bot size={18} />
+                    <span className="group-data-[collapsible=icon]:hidden">Direct Mode</span>
+                </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+                <SidebarMenuButton onClick={() => handleModeChange('mcp')} isActive={connectionMode === 'mcp'} tooltip={{ children: "MCP Server Mode"}}>
+                    <Server size={18} />
+                    <span className="group-data-[collapsible=icon]:hidden">MCP Mode</span>
+                </SidebarMenuButton>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+                <SidebarMenuButton onClick={() => handleModeChange('rag')} isActive={connectionMode === 'rag'} tooltip={{ children: "RAG Mode" }}>
+                    <BrainCircuit size={18} />
+                    <span className="group-data-[collapsible=icon]:hidden">RAG Mode</span>
+                </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+
           <div className="flex-grow overflow-y-auto mt-4">
             {connectionMode === 'rag' && (
               <CollectionSelector 
@@ -123,12 +161,14 @@ export default function Home() {
                 refreshKey={refreshKey}
               />
             )}
-            <ModelSelector 
-              selectedModel={selectedModel} 
-              onSelectModel={setSelectedModel} 
-              refreshKey={refreshKey} 
-              connectionMode={connectionMode} 
-            />
+            {connectionMode && 
+              <ModelSelector 
+                selectedModel={selectedModel} 
+                onSelectModel={setSelectedModel} 
+                refreshKey={refreshKey} 
+                connectionMode={connectionMode} 
+              />
+            }
           </div>
         </SidebarContent>
         <SidebarFooter className="p-0 mt-auto">

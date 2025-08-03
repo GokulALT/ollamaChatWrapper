@@ -200,7 +200,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
                     <div className="space-y-2 pr-4">
                       {message.sources.map((source, index) => (
                         <div key={index} className="p-2 bg-muted/50 rounded-md text-xs">
-                          <p className="truncate text-muted-foreground">Source {index + 1}</p>
+                          <p className="truncate text-muted-foreground">Source {index + 1}: {source.metadata.source || 'unknown'}</p>
                           <p className="mt-1 whitespace-pre-wrap">{source.pageContent}</p>
                         </div>
                       ))}
