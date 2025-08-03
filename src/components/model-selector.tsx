@@ -27,6 +27,8 @@ interface ModelSelectorProps {
   connectionMode: ConnectionMode;
 }
 
+const GEMINI_MODEL = { id: 'gemini-1.5-flash', name: 'gemini-1.5-flash' };
+
 export function ModelSelector({ selectedModel, onSelectModel, refreshKey, connectionMode }: ModelSelectorProps) {
   const [models, setModels] = useState<Model[]>([]);
   const [tools, setTools] = useState<Model[]>([]);
@@ -37,57 +39,74 @@ export function ModelSelector({ selectedModel, onSelectModel, refreshKey, connec
     const fetchItems = async () => {
       setIsLoading(true);
       setError(null);
+      
+      // MCP mode is distinct and connects to the MCP server for its model list.
+      if (connectionMode === 'mcp') {
+        try {
+          const response = await fetch(`/api/ollama/models?mode=mcp`, {
+              headers: { 'X-Ollama-Url': getMcpUrl() }
+          });
 
-      // In direct mode, we now use Genkit and Gemini, so we don't need to fetch models.
-      if (connectionMode === 'direct') {
-        const geminiModel = { id: 'gemini-1.5-flash', name: 'gemini-1.5-flash' };
-        setModels([geminiModel]);
-        setTools([]);
-        onSelectModel(geminiModel.id);
-        setIsLoading(false);
+          if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `Failed to fetch: ${response.statusText}`);
+          }
+          const allItems: Model[] = await response.json();
+          
+          const availableModels = allItems.filter(item => !item.id.startsWith('tool/'));
+          const availableTools = allItems.filter(item => item.id.startsWith('tool/'));
+
+          setModels(availableModels);
+          setTools(availableTools);
+
+          // Auto-select logic for MCP models
+          if (!selectedModel && availableModels.length > 0) {
+            onSelectModel(availableModels[0].id);
+          } else if (availableModels.length > 0 && selectedModel && !availableModels.some(m => m.id === selectedModel)) {
+            onSelectModel(availableModels[0].id);
+          } else if (availableModels.length === 0) {
+            onSelectModel(null);
+          }
+        } catch (err: any) {
+          console.error("Error fetching MCP models/tools:", err);
+          setError(err.message || `Could not load models from MCP.`);
+          setModels([]);
+          setTools([]);
+        } finally {
+          setIsLoading(false);
+        }
         return;
       }
 
+      // For 'direct' and 'rag' modes, we fetch local Ollama models and prepend Gemini.
       try {
-        const fetchMode = connectionMode === 'rag' ? 'direct' : connectionMode;
-        const baseUrl = fetchMode === 'mcp' ? getMcpUrl() : getOllamaUrl();
-        
-        const response = await fetch(`/api/ollama/models?mode=${fetchMode}`, {
-            headers: { 'X-Ollama-Url': baseUrl }
+        const response = await fetch(`/api/ollama/models?mode=direct`, {
+            headers: { 'X-Ollama-Url': getOllamaUrl() }
         });
 
         if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(errorData.error || `Failed to fetch: ${response.statusText}`);
+            // Don't throw an error if Ollama isn't running, just show an empty list.
+            // We can still use the online Gemini model.
+            console.warn("Could not fetch local Ollama models. This is okay if you only intend to use online models.");
+            setModels([GEMINI_MODEL]);
+            onSelectModel(selectedModel || GEMINI_MODEL.id);
+            setIsLoading(false);
+            return;
         }
-        const allItems: Model[] = await response.json();
+
+        const localModels: Model[] = await response.json();
+        const allModels = [GEMINI_MODEL, ...localModels];
+        setModels(allModels);
         
-        let availableModels: Model[];
-        let availableTools: Model[] = [];
-
-        if (connectionMode === 'mcp') {
-            availableModels = allItems.filter(item => !item.id.startsWith('tool/'));
-            availableTools = allItems.filter(item => item.id.startsWith('tool/'));
-        } else {
-            availableModels = allItems;
-        }
-
-        setModels(availableModels);
-        setTools(availableTools);
-
-        if (!selectedModel && availableModels.length > 0) {
-          onSelectModel(availableModels[0].id);
-        } else if (availableModels.length > 0 && selectedModel && !availableModels.some(m => m.id === selectedModel)) {
-          onSelectModel(availableModels[0].id);
-        } else if (availableModels.length === 0) {
-          onSelectModel(null);
+        // Auto-select logic for Direct/RAG
+        if (!selectedModel || !allModels.some(m => m.id === selectedModel)) {
+          onSelectModel(allModels[0]?.id || null);
         }
 
       } catch (err: any) {
-        console.error("Error fetching models/tools:", err);
-        setError(err.message || `Could not load models from ${connectionMode.toUpperCase()}.`);
-        setModels([]);
-        setTools([]);
+        console.error("Error fetching models:", err);
+        setError(err.message || `Could not load models.`);
+        setModels([GEMINI_MODEL]); // Still show Gemini even if Ollama fetch fails
       } finally {
         setIsLoading(false);
       }
