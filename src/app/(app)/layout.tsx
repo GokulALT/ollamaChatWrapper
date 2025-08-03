@@ -1,6 +1,8 @@
+
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { ModelSelector } from '@/components/model-selector';
 import { OllamaStatus } from '@/components/ollama-status';
@@ -14,48 +16,50 @@ import {
   SidebarProvider,
   SidebarRail,
   SidebarTrigger,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarMenuButton,
 } from '@/components/ui/sidebar';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
-import { MessageSquare, FilePlus2, Settings } from 'lucide-react';
+import { MessageSquare, FilePlus2, Settings, Server, BrainCircuit, Bot } from 'lucide-react';
 import { ThemeToggle } from '@/components/theme-toggle';
 import { CollectionSelector } from '@/components/collection-selector';
 import type { ConnectionMode } from '@/types/chat';
-import { ChatWindow } from '@/components/chat-window';
 
-export default function Home() {
+export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [selectedModel, setSelectedModel] = useState<string | null>(null);
-  const [connectionMode, setConnectionMode] = useState<ConnectionMode>('direct');
   const [newChatKey, setNewChatKey] = useState<number>(Date.now());
   const [systemPrompt, setSystemPrompt] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState<number>(Date.now());
   const [selectedCollection, setSelectedCollection] = useState<string | null>(null);
+  
+  const pathname = usePathname();
+  // Extract mode from URL, e.g., '/direct' -> 'direct'
+  const connectionMode = (pathname.startsWith('/') ? pathname.substring(1) : pathname) as ConnectionMode;
 
   useEffect(() => {
     try {
-      const storedMode = localStorage.getItem('connection_mode') as ConnectionMode;
-      if (storedMode && ['direct', 'mcp', 'rag'].includes(storedMode)) {
-        if (connectionMode !== storedMode) {
-            setConnectionMode(storedMode);
-            // Reset dependent state when mode changes
-            setSelectedModel(null);
-            setSelectedCollection(null);
-            handleNewChat();
-        }
-      }
       const storedPrompt = localStorage.getItem('system_prompt');
       if (storedPrompt) setSystemPrompt(storedPrompt);
 
-      if (storedMode === 'rag') {
+      if (connectionMode === 'rag') {
           const storedCollection = localStorage.getItem('selected_collection');
           if (storedCollection) setSelectedCollection(storedCollection);
       }
     } catch (error) {
       console.warn("Could not access localStorage.");
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [refreshKey]);
+  }, [connectionMode]);
 
+  // Reset state when navigating between modes
+  useEffect(() => {
+      setSelectedModel(null);
+      setSelectedCollection(null);
+      handleRefresh();
+      handleNewChat();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pathname]);
 
   const handleNewChat = () => {
     setNewChatKey(Date.now());
@@ -90,6 +94,19 @@ export default function Home() {
     return selectedModel ? `${selectedModel}` : 'Select a Model';
   }
 
+  // Pass necessary state down to children (the page components) via cloneElement.
+  const childrenWithProps = React.Children.map(children, child => {
+    if (React.isValidElement(child)) {
+      return React.cloneElement(child, { 
+          selectedModel,
+          newChatKey,
+          systemPrompt,
+          selectedCollection,
+       } as any);
+    }
+    return child;
+  });
+
   return (
     <SidebarProvider defaultOpen={true}>
       <Sidebar variant="sidebar" collapsible="icon" side="left">
@@ -115,6 +132,33 @@ export default function Home() {
           
           <Separator className="my-2 group-data-[collapsible=icon]:hidden" />
 
+          <SidebarMenu>
+             <SidebarMenuItem>
+                <Link href="/direct" passHref legacyBehavior>
+                    <SidebarMenuButton isActive={connectionMode === 'direct'} tooltip={{ children: "Direct Mode" }}>
+                        <Bot size={18} />
+                        <span className="group-data-[collapsible=icon]:hidden">Direct Mode</span>
+                    </SidebarMenuButton>
+                </Link>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+                <Link href="/mcp" passHref legacyBehavior>
+                    <SidebarMenuButton isActive={connectionMode === 'mcp'} tooltip={{ children: "MCP Server Mode"}}>
+                        <Server size={18} />
+                        <span className="group-data-[collapsible=icon]:hidden">MCP Mode</span>
+                    </SidebarMenuButton>
+                </Link>
+            </SidebarMenuItem>
+            <SidebarMenuItem>
+                <Link href="/rag" passHref legacyBehavior>
+                    <SidebarMenuButton isActive={connectionMode === 'rag'} tooltip={{ children: "RAG Mode" }}>
+                        <BrainCircuit size={18} />
+                        <span className="group-data-[collapsible=icon]:hidden">RAG Mode</span>
+                    </SidebarMenuButton>
+                </Link>
+            </SidebarMenuItem>
+          </SidebarMenu>
+
           <div className="flex-grow overflow-y-auto mt-4">
             {connectionMode === 'rag' && (
               <CollectionSelector 
@@ -123,12 +167,14 @@ export default function Home() {
                 refreshKey={refreshKey}
               />
             )}
-            <ModelSelector 
-              selectedModel={selectedModel} 
-              onSelectModel={setSelectedModel} 
-              refreshKey={refreshKey} 
-              connectionMode={connectionMode} 
-            />
+            {connectionMode && 
+              <ModelSelector 
+                selectedModel={selectedModel} 
+                onSelectModel={setSelectedModel} 
+                refreshKey={refreshKey} 
+                connectionMode={connectionMode} 
+              />
+            }
           </div>
         </SidebarContent>
         <SidebarFooter className="p-0 mt-auto">
@@ -148,7 +194,7 @@ export default function Home() {
             </h1>
            </div>
           <div className="flex items-center gap-1">
-             <Button asChild variant="ghost" size="icon" title="Settings">
+            <Button asChild variant="ghost" size="icon" title="Settings">
                 <Link href="/settings">
                   <Settings size={18} />
                   <span className="sr-only">Settings</span>
@@ -159,13 +205,7 @@ export default function Home() {
         </header>
         
         <main className="flex-1 overflow-hidden h-[calc(100vh-57px)]">
-          <ChatWindow
-            selectedModel={selectedModel}
-            connectionMode={connectionMode}
-            newChatKey={newChatKey}
-            systemPrompt={systemPrompt}
-            selectedCollection={selectedCollection}
-          />
+          {childrenWithProps}
         </main>
       </SidebarInset>
     </SidebarProvider>

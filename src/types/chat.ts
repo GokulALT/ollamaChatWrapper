@@ -1,5 +1,6 @@
 
 export interface Source {
+  id: string;
   pageContent: string;
   metadata: Record<string, any>;
 }
@@ -11,6 +12,6 @@ export interface ChatMessageData {
   text: string;
   sender: 'user' | 'ai';
   timestamp: Date;
-  model?: string | null;
+  model?: string;
   sources?: Source[];
 }

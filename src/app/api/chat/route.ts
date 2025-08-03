@@ -1,9 +1,8 @@
 
 import {type NextRequest, NextResponse} from 'next/server';
-import type {ChatMessage} from 'genkit';
-import {run} from 'genkit/flow';
-import {chat} from '@/ai/flows/chat';
-import {ragFlow} from '@/ai/flows/rag-flow';
+import type {ChatCompletionMessageParam} from 'openai/resources/chat/completions';
+import {handleMcpDirectChat} from '@/lib/chat/mcp-direct';
+import {handleRagChat} from '@/lib/chat/rag';
 import type {ConnectionMode} from '@/types/chat';
 
 /**
@@ -37,7 +36,7 @@ import type {ConnectionMode} from '@/types/chat';
  *               messages:
  *                 type: array
  *                 items:
- *                   $ref: '#/components/schemas/ChatMessage'
+ *                   $ref: '#/components/schemas/ChatCompletionMessageParam'
  *                 description: A list of messages comprising the conversation so far.
  *               systemPrompt:
  *                 type: string
@@ -70,7 +69,7 @@ import type {ConnectionMode} from '@/types/chat';
  *               $ref: '#/components/schemas/ErrorResponse'
  * components:
  *   schemas:
- *     ChatMessage:
+ *     ChatCompletionMessageParam:
  *       type: object
  *       required:
  *         - role
@@ -78,14 +77,9 @@ import type {ConnectionMode} from '@/types/chat';
  *       properties:
  *         role:
  *           type: string
- *           enum: [system, user, assistant, tool]
+ *           enum: [system, user, assistant]
  *         content:
- *           type: array
- *           items:
- *             type: object
- *             properties:
- *               text:
- *                 type: string
+ *           type: string
  *     ErrorResponse:
  *       type: object
  *       properties:
@@ -106,7 +100,7 @@ export async function POST(req: NextRequest) {
     } = (await req.json()) as {
       connectionMode: ConnectionMode;
       model: string;
-      messages: ChatMessage[];
+      messages: ChatCompletionMessageParam[];
       systemPrompt?: string;
       temperature?: number;
       collection?: string;
@@ -120,42 +114,44 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    let flowToRun;
-    let flowInput: any = {
-      model,
-      history: messages,
-      systemPrompt: systemPrompt,
-      temperature: temperature,
-    };
+    let responseStream: ReadableStream<Uint8Array>;
 
-    if (connectionMode === 'rag') {
-      if (!collection) {
+    switch (connectionMode) {
+      case 'direct':
+      case 'mcp':
+        responseStream = await handleMcpDirectChat({
+          req,
+          model,
+          messages,
+          systemPrompt,
+          temperature,
+          connectionMode,
+        });
+        break;
+      case 'rag':
+        if (!collection) {
+          return NextResponse.json(
+            {error: 'RAG mode requires a `collection` parameter.'},
+            {status: 400}
+          );
+        }
+        responseStream = await handleRagChat({
+          req,
+          model,
+          collection,
+          messages,
+          systemPrompt,
+          temperature,
+        });
+        break;
+      default:
         return NextResponse.json(
-          {error: 'RAG mode requires a `collection` parameter.'},
+          {error: `Invalid connectionMode: ${connectionMode}`},
           {status: 400}
         );
-      }
-      flowToRun = ragFlow;
-      flowInput.collection = collection;
-    } else {
-      flowToRun = chat;
     }
 
-    const {stream, response} = await run(flowToRun, flowInput);
-
-    const outputStream = new ReadableStream({
-      async start(controller) {
-        const encoder = new TextEncoder();
-        for await (const chunk of stream) {
-          if (chunk.output) {
-            controller.enqueue(encoder.encode(chunk.output as string));
-          }
-        }
-        controller.close();
-      },
-    });
-
-    return new Response(outputStream, {
+    return new Response(responseStream, {
       headers: {
         'Content-Type': 'text/plain; charset=utf-8',
         'X-Content-Type-Options': 'nosniff',
