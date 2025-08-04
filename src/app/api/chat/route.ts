@@ -6,9 +6,7 @@ import {rag} from '@/ai/flows/rag-flow';
 import {ai} from '@/ai/genkit';
 import {configureGenkit} from 'genkit';
 
-import {anthropic} from '@genkit-ai/anthropic';
 import {googleAI} from '@genkit-ai/googleai';
-import {openai} from '@genkit-ai/openai';
 
 // Helper function to safely get environment variables
 const getEnvVar = (name: string): string => {
@@ -30,15 +28,11 @@ const getEnvVar = (name: string): string => {
 export async function POST(req: NextRequest) {
   try {
     const geminiKey = getEnvVar('GEMINI_API_KEY');
-    const anthropicKey = getEnvVar('ANTHROPIC_API_KEY');
-    const openaiKey = getEnvVar('OPENAI_API_KEY');
-
+    
     // Configure Genkit within the request handler to ensure keys are fresh
     configureGenkit({
         plugins: [
-        googleAI({apiKey: geminiKey}),
-        anthropic({apiKey: anthropicKey}),
-        openai({apiKey: openaiKey}),
+            googleAI({apiKey: geminiKey}),
         ],
         // Adding logging to help debug issues
         logLevel: 'debug',
