@@ -22,8 +22,9 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ThemeToggle } from '@/components/theme-toggle';
-import { getOllamaUrl, setOllamaUrl, getMcpUrl, setMcpUrl, getChromaUrl, setChromaUrl, getTemperature, setTemperature } from '@/lib/config';
+import { getOllamaUrl, setOllamaUrl, getMcpUrl, setMcpUrl, getChromaUrl, setChromaUrl, getTemperature, setTemperature, getEnableReranking, setEnableReranking } from '@/lib/config';
 import { Slider } from '@/components/ui/slider';
+import { Switch } from '@/components/ui/switch';
 
 
 interface Model {
@@ -181,6 +182,16 @@ function RagManager() {
     const [isCreating, setIsCreating] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const [isLoadingCollections, setIsLoadingCollections] = useState(true);
+    const [enableReranking, setEnableRerankingState] = useState(true);
+
+    useEffect(() => {
+        setEnableRerankingState(getEnableReranking());
+    }, []);
+
+    const handleRerankingChange = (checked: boolean) => {
+        setEnableRerankingState(checked);
+        setEnableReranking(checked);
+    };
 
     const fetchCollections = useCallback(async () => {
         setIsLoadingCollections(true);
@@ -301,6 +312,26 @@ function RagManager() {
                    You can configure the URLs for these services in the 'General' settings tab.
                 </AlertDescription>
             </Alert>
+             <Card>
+                <CardHeader>
+                    <CardTitle className="text-base">RAG Configuration</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <Label htmlFor="rerank-switch">Enable Re-ranking</Label>
+                            <p className="text-sm text-muted-foreground">
+                                Use the LLM to re-rank search results for better relevance. Disabling this improves speed.
+                            </p>
+                        </div>
+                        <Switch
+                            id="rerank-switch"
+                            checked={enableReranking}
+                            onCheckedChange={handleRerankingChange}
+                        />
+                    </div>
+                </CardContent>
+            </Card>
             <Card>
                 <CardHeader>
                     <CardTitle className="text-base">Manage Databases (Collections)</CardTitle>

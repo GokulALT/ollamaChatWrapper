@@ -11,7 +11,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Send, Loader2, MessageSquare, BrainCircuit } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from "@/hooks/use-toast";
-import { getOllamaUrl, getMcpUrl, getChromaUrl, getTemperature } from '@/lib/config';
+import { getOllamaUrl, getMcpUrl, getChromaUrl, getTemperature, getEnableReranking } from '@/lib/config';
 
 interface ChatWindowProps {
   selectedModel: string | null;
@@ -162,6 +162,7 @@ export function ChatWindow({ selectedModel, connectionMode, newChatKey, systemPr
           systemPrompt,
           temperature: getTemperature(),
           collection: selectedCollection,
+          enableReranking: connectionMode === 'rag' ? getEnableReranking() : undefined,
         }),
         signal: abortControllerRef.current!.signal,
       });

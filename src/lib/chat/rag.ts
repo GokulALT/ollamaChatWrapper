@@ -10,6 +10,7 @@ interface RagChatParams {
   messages: ChatCompletionMessageParam[];
   systemPrompt?: string;
   temperature?: number;
+  enableReranking?: boolean;
 }
 
 const RESPONSE_SEPARATOR = '_--_SEPARATOR_--_';
@@ -152,6 +153,7 @@ export async function handleRagChat({
   messages,
   systemPrompt,
   temperature,
+  enableReranking = true, // Default to true if not provided
 }: RagChatParams): Promise<ReadableStream<Uint8Array>> {
   const ollamaBaseUrl = req.headers.get('X-Ollama-Url');
   if (!ollamaBaseUrl) {
@@ -165,7 +167,7 @@ export async function handleRagChat({
 
   const latestQuery = messages[messages.length - 1].content as string;
 
-  // 1. Get initial set of documents from ChromaDB (fetch more to re-rank)
+  // 1. Get initial set of documents from ChromaDB
   const embedder = new OllamaEmbeddingFunction(ollamaBaseUrl, 'nomic-embed-text');
 
   const collection = await chroma.getCollection({
@@ -174,7 +176,7 @@ export async function handleRagChat({
   });
   const results = await collection.query({
     queryTexts: [latestQuery],
-    nResults: 10, // Fetch more results for re-ranking
+    nResults: enableReranking ? 10 : 5, // Fetch more results for re-ranking
   });
 
   const initialDocs = results.documents[0].map((doc, i) => ({
@@ -183,16 +185,10 @@ export async function handleRagChat({
     metadata: results.metadatas[0][i] || {},
   }));
 
-  // 2. Re-rank documents using the LLM
-  const rerankedDocs = await rerankDocuments(
-    ollamaBaseUrl,
-    model,
-    latestQuery,
-    initialDocs
-  );
-
-  // Take the top 5 after re-ranking
-  const finalDocs = rerankedDocs.slice(0, 5);
+  // 2. Conditionally re-rank documents using the LLM
+  const finalDocs = enableReranking
+    ? (await rerankDocuments(ollamaBaseUrl, model, latestQuery, initialDocs)).slice(0, 5)
+    : initialDocs;
 
   const contextText = finalDocs.map(d => d.pageContent).join('\n---\n');
 

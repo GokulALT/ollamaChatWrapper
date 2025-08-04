@@ -47,6 +47,9 @@ import type {ConnectionMode} from '@/types/chat';
  *               collection:
  *                 type: string
  *                 description: The name of the RAG collection to use (required for `rag` mode).
+ *               enableReranking:
+ *                 type: boolean
+ *                 description: Whether to enable the re-ranking step in RAG mode.
  *     responses:
  *       '200':
  *         description: A streaming response with the model's output.
@@ -97,6 +100,7 @@ export async function POST(req: NextRequest) {
       systemPrompt,
       temperature,
       collection,
+      enableReranking,
     } = (await req.json()) as {
       connectionMode: ConnectionMode;
       model: string;
@@ -104,6 +108,7 @@ export async function POST(req: NextRequest) {
       systemPrompt?: string;
       temperature?: number;
       collection?: string;
+      enableReranking?: boolean;
     };
 
     // Basic validation
@@ -142,6 +147,7 @@ export async function POST(req: NextRequest) {
           messages,
           systemPrompt,
           temperature,
+          enableReranking,
         });
         break;
       default:
