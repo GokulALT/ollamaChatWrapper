@@ -10,93 +10,109 @@ import {anthropic} from '@genkit-ai/anthropic';
 import {googleAI} from '@genkit-ai/googleai';
 import {openai} from '@genkit-ai/openai';
 
+// Helper function to safely get environment variables
+const getEnvVar = (name: string): string => {
+    try {
+        // In Edge Runtime, process.env is not available.
+        // A common pattern is to have them available on a global object
+        // provided by the environment, or handle them via build-time replacement.
+        // For this context, we will assume a global accessor might exist
+        // or fall back gracefully. This is a placeholder for a proper secrets management solution.
+        if (typeof process !== 'undefined' && process.env) {
+            return process.env[name] || '';
+        }
+        return '';
+    } catch (e) {
+        return '';
+    }
+}
+
 export async function POST(req: NextRequest) {
-  let geminiKey = '';
-  let anthropicKey = '';
-  let openaiKey = '';
   try {
-    geminiKey = process.env.GEMINI_API_KEY || '';
-    anthropicKey = process.env.ANTHROPIC_API_KEY || '';
-    openaiKey = process.env.OPENAI_API_KEY || '';
-  } catch (e) {
-    // probably running in a browser
-  }
+    const geminiKey = getEnvVar('GEMINI_API_KEY');
+    const anthropicKey = getEnvVar('ANTHROPIC_API_KEY');
+    const openaiKey = getEnvVar('OPENAI_API_KEY');
 
-  // Note: Next.js edge runtime doesn't support `process.env`.
-  // We workaround this by reading the headers passed from the client.
-  // This is a temporary solution until we can securely manage API keys on the server.
-  configureGenkit({
-    plugins: [
-      googleAI({apiKey: geminiKey}),
-      anthropic({apiKey: anthropicKey}),
-      openai({apiKey: openaiKey}),
-    ],
-  });
+    // Configure Genkit within the request handler to ensure keys are fresh
+    configureGenkit({
+        plugins: [
+        googleAI({apiKey: geminiKey}),
+        anthropic({apiKey: anthropicKey}),
+        openai({apiKey: openaiKey}),
+        ],
+        // Adding logging to help debug issues
+        logLevel: 'debug',
+        enableTracing: true,
+    });
 
-  const {
-    connectionMode,
-    model,
-    messages,
-    systemPrompt,
-    temperature,
-    collection,
-    enableReranking,
-  } = (await req.json()) as {
-    connectionMode: 'direct' | 'rag';
-    model: string;
-    messages: ChatMessage[];
-    systemPrompt?: string;
-    temperature?: number;
-    collection?: string;
-    enableReranking?: boolean;
-  };
+    const {
+        connectionMode,
+        model,
+        messages,
+        systemPrompt,
+        temperature,
+        collection,
+        enableReranking,
+    } = (await req.json()) as {
+        connectionMode: 'direct' | 'rag';
+        model: string;
+        messages: ChatMessage[];
+        systemPrompt?: string;
+        temperature?: number;
+        collection?: string;
+        enableReranking?: boolean;
+    };
 
-  let responseStream: ReadableStream<any>;
+    let responseStream: ReadableStream<any>;
 
-  try {
     const llm = ai.model(model);
+    
+    // Convert message history to the format Genkit expects
     const history = messages.map(msg => ({
-      role: msg.sender,
+      role: msg.sender as 'user' | 'ai', // Type assertion
       content: [{text: msg.text}],
     }));
-    // Remove the latest message from history and use it as the prompt.
+
+    // The last message is the new prompt
     const prompt = history.pop()!.content;
 
     if (connectionMode === 'rag') {
-      if (!collection) {
-        throw new Error('RAG mode requires a `collection` parameter.');
-      }
-      responseStream = await rag.stream({
-        prompt: prompt,
-        history: history,
-        llm,
-        collection,
-        systemPrompt,
-        temperature,
-        ollamaHost: req.headers.get('X-Ollama-Url')!,
-        chromaHost: req.headers.get('X-Chroma-Url')!,
-        enableReranking: enableReranking ?? true,
-      });
+        if (!collection) {
+            throw new Error('RAG mode requires a `collection` parameter.');
+        }
+        responseStream = await rag.stream({
+            prompt: prompt,
+            history: history,
+            llm,
+            collection,
+            systemPrompt,
+            temperature,
+            ollamaHost: req.headers.get('X-Ollama-Url')!,
+            chromaHost: req.headers.get('X-Chroma-Url')!,
+            enableReranking: enableReranking ?? true,
+        });
     } else {
-      responseStream = await chat.stream({
-        prompt: prompt,
-        history: history,
-        llm,
-        systemPrompt,
-        temperature,
-      });
+        responseStream = await chat.stream({
+            prompt: prompt,
+            history: history,
+            llm,
+            systemPrompt,
+            temperature,
+        });
     }
 
     return new Response(responseStream, {
-      headers: {
+        headers: {
         'Content-Type': 'text/plain; charset=utf-8',
         'X-Content-Type-Options': 'nosniff',
-      },
+        },
     });
   } catch (err: any) {
-    console.error(err);
-    return NextResponse.json({error: err.message}, {status: 500});
+    console.error(`[Chat API Error] ${err.stack}`);
+    // Return a more descriptive error response
+    return NextResponse.json(
+        {error: err.message || 'An unexpected server error occurred.'}, 
+        {status: 500}
+    );
   }
 }
-
-    
