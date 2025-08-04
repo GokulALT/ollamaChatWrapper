@@ -1,7 +1,7 @@
 'use server';
 
 import {ai} from '@/ai/genkit';
-import {GenerateRequest, MessageData, generate} from 'genkit/generate';
+import {GenerateRequest, MessageData, generate} from 'genkit/ai';
 import {z} from 'zod';
 
 const ChatRequestSchema = z.object({

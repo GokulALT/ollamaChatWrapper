@@ -4,7 +4,7 @@
 import {ai} from '@/ai/genkit';
 import {ChromaClient, type ChromaClientParams} from 'chromadb';
 import type {MessageData, Part} from 'genkit';
-import {GenerateRequest, ModelArgument, generate} from 'genkit/generate';
+import {GenerateRequest, ModelArgument, generate} from 'genkit/ai';
 import {z} from 'zod';
 
 const RagRequestSchema = z.object({
@@ -236,5 +236,3 @@ ${contextText}
     return combinedStream;
   }
 );
-
-    
