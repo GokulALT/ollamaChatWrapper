@@ -1,4 +1,3 @@
-
 'use server';
 
 import {ai} from '@/ai/genkit';
@@ -39,7 +38,7 @@ export const chat = ai.flow(
         ]
     }
 
-    const {stream, response} = generate(generateRequest);
+    const {stream, response} = await generate(generateRequest);
 
     const transformStream = new TransformStream({
       async transform(chunk, controller) {
