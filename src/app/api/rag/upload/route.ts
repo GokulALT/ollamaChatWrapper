@@ -89,7 +89,7 @@ export async function POST(req: NextRequest) {
         }
         
         let text = '';
-        if (file.type === 'text/plain') {
+        if (file.type ) {
             text = await file.text();
         } else {
              return NextResponse.json({ error: 'Only .txt files are supported.' }, { status: 400 });
