@@ -2,8 +2,9 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { Cpu, AlertTriangle, Wrench } from 'lucide-react';
+import { Cpu, AlertTriangle, Wrench, RefreshCw } from 'lucide-react';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Button } from '@/components/ui/button';
 import {
   SidebarMenu,
   SidebarMenuItem,
@@ -14,6 +15,7 @@ import {
 } from '@/components/ui/sidebar';
 import type { ConnectionMode } from '@/types/chat';
 import { getOllamaUrl, getMcpUrl } from '@/lib/config';
+import { cn } from '@/lib/utils';
 
 interface Model {
   id: string;

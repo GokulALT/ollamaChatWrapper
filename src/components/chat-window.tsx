@@ -7,10 +7,11 @@ import { ChatMessage } from '@/components/chat-message';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Send, AlertTriangle, Loader2, MessageSquare, BrainCircuit } from 'lucide-react';
+import { Send, AlertTriangle, Loader2, MessageSquare, BrainCircuit, Sparkles, X } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { useToast } from "@/hooks/use-toast";
 import { getOllamaUrl, getMcpUrl, getChromaUrl } from '@/lib/config';
+import { cn } from '@/lib/utils';
 
 interface ChatWindowProps {
   selectedModel: string | null;
@@ -215,11 +216,11 @@ export function ChatWindow({ selectedModel, connectionMode, newChatKey, systemPr
   
   const getPlaceholder = () => {
     if (connectionMode === 'rag') {
-      if (!selectedCollection) return "Please select a collection first."
-      if (!selectedModel) return "Please select a model to continue."
+      if (!selectedCollection) return "Select a collection to start asking questions about your documents..."
+      if (!selectedModel) return "Select a model to continue..."
       return "Ask a question about your documents...";
     }
-    return selectedModel ? "Type your message (Shift+Enter for new line)..." : "Please select a model first."
+    return selectedModel ? "Type your message (Shift+Enter for new line)..." : "Select a model to start chatting..."
   }
 
   const isChatDisabled = () => {
@@ -228,36 +229,107 @@ export function ChatWindow({ selectedModel, connectionMode, newChatKey, systemPr
     return !selectedModel;
   }
 
+  const clearInput = () => {
+    setInput('');
+  };
+
+  const getEmptyStateContent = () => {
+    if (connectionMode === 'rag') {
+      return {
+        icon: BrainCircuit,
+        title: 'Ready to Explore Your Documents',
+        description: 'Select a collection and model, then ask questions about your uploaded documents. The AI will provide answers with relevant context.',
+        suggestions: [
+          'What are the main topics in this document?',
+          'Summarize the key findings',
+          'What data is available about X?',
+        ],
+      };
+    }
+    return {
+      icon: Sparkles,
+      title: 'Start a Conversation',
+      description: 'Select a model and begin chatting. Ask questions, get creative help, or explore ideas with AI assistance.',
+      suggestions: [
+        'Explain a complex concept',
+        'Help me brainstorm ideas',
+        'Write something for me',
+      ],
+    };
+  };
+
+  const emptyState = getEmptyStateContent();
+  const EmptyIcon = emptyState.icon;
+
   return (
-    <div className="flex flex-col h-full max-h-full bg-background">
+    <div className="flex flex-col h-full max-h-full bg-gradient-to-b from-background to-muted/20">
       <ScrollArea className="flex-grow" viewportRef={scrollAreaViewportRef}>
-        <div className="p-4 space-y-4">
+        <div className="p-4 space-y-6 max-w-4xl mx-auto">
           {messages.length === 0 && (
-             <div className="text-center text-muted-foreground pt-10">
-              {connectionMode === 'rag' ? <BrainCircuit size={40} className="mx-auto" /> : <MessageSquare size={40} className="mx-auto" />}
-              <p className="mt-2">
-                {connectionMode === 'rag' 
-                  ? "You are in RAG mode. Ask questions about your documents." 
-                  : "Start a conversation by typing below."
-                }
-              </p>
+             <div className="flex flex-col items-center justify-center py-16 text-center">
+              <div className={cn(
+                "p-6 rounded-2xl mb-6",
+                connectionMode === 'rag' ? "bg-green-500/10" : "bg-purple-500/10"
+              )}>
+                <EmptyIcon size={64} className={cn(
+                  connectionMode === 'rag' ? "text-green-500" : "text-purple-500"
+                )} />
+              </div>
+              <h2 className="text-2xl font-semibold text-foreground mb-2">{emptyState.title}</h2>
+              <p className="text-muted-foreground max-w-md mb-8">{emptyState.description}</p>
+
+              <div className="flex flex-wrap gap-2 justify-center mb-8">
+                {emptyState.suggestions.map((suggestion, index) => (
+                  <Button
+                    key={index}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setInput(suggestion)}
+                    className="text-sm hover:bg-primary/10 hover:border-primary/30 transition-all"
+                    disabled={isChatDisabled()}
+                  >
+                    {suggestion}
+                  </Button>
+                ))}
+              </div>
+
               {systemPrompt && (
-                <p className="text-xs mt-4 italic max-w-md mx-auto">
-                  System Prompt Active: "{systemPrompt.length > 100 ? `${systemPrompt.substring(0, 100)}...` : systemPrompt}"
-                </p>
+                <div className="w-full max-w-lg">
+                  <div className="bg-muted/50 border rounded-lg p-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Sparkles size={14} className="text-primary" />
+                      <span className="text-sm font-medium">Active System Prompt</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground italic">
+                      "{systemPrompt.length > 150 ? `${systemPrompt.substring(0, 150)}...` : systemPrompt}"
+                    </p>
+                  </div>
+                </div>
               )}
             </div>
           )}
+
           {messages.map((msg) => (
             <ChatMessage key={msg.id} message={msg} />
           ))}
-          {isLoading && messages[messages.length -1]?.sender === 'user' && ( 
-            <div className="flex items-start gap-3 justify-start">
-               <Card className="max-w-xs sm:max-w-md md:max-w-lg rounded-xl shadow-sm bg-card text-card-foreground">
-                <CardContent className="p-3">
-                  <div className="flex items-center gap-2 text-sm">
-                    <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
-                    <span>Thinking...</span>
+
+          {isLoading && messages[messages.length - 1]?.sender === 'user' && (
+            <div className="flex items-start gap-3 justify-start animate-in fade-in-0 slide-in-from-bottom-4 duration-300">
+               <Card className="max-w-xs sm:max-w-md md:max-w-lg rounded-2xl shadow-sm bg-card text-card-foreground border-primary/20">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="relative">
+                      <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                      <div className="absolute inset-0 h-5 w-5 animate-ping rounded-full bg-primary/20" />
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-sm font-medium">Thinking</p>
+                      <div className="flex gap-1">
+                        <div className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                        <div className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                        <div className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                      </div>
+                    </div>
                   </div>
                 </CardContent>
               </Card>
@@ -265,26 +337,58 @@ export function ChatWindow({ selectedModel, connectionMode, newChatKey, systemPr
           )}
         </div>
       </ScrollArea>
-      
-      <div className="p-4 border-t bg-background">
+
+      <div className="p-4 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <form
           onSubmit={handleFormSubmit}
-          className="flex items-end gap-2" 
+          className="flex items-end gap-2 max-w-4xl mx-auto"
         >
-          <Textarea
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleTextareaKeyDown}
-            placeholder={getPlaceholder()}
-            className="flex-grow resize-none min-h-[40px] max-h-[200px] py-2 px-3" 
-            rows={1} 
-            disabled={isChatDisabled()}
-            aria-label="Chat input"
-          />
-          <Button type="submit" size="icon" disabled={isLoading || !input.trim() || isChatDisabled()} aria-label="Send message">
-            <Send size={18} />
+          <div className="flex-grow relative">
+            <Textarea
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleTextareaKeyDown}
+              placeholder={getPlaceholder()}
+              className="flex-grow resize-none min-h-[52px] max-h-[200px] py-3 pr-10 rounded-2xl border-2 focus:border-primary/50 transition-all"
+              rows={1}
+              disabled={isChatDisabled()}
+              aria-label="Chat input"
+            />
+            {input && (
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 hover:bg-muted/50"
+                onClick={clearInput}
+                disabled={isLoading}
+              >
+                <X size={14} />
+              </Button>
+            )}
+          </div>
+          <Button
+            type="submit"
+            size="icon"
+            className={cn(
+              "h-12 w-12 rounded-xl transition-all",
+              !input.trim() || isChatDisabled()
+                ? "opacity-50 cursor-not-allowed"
+                : "hover:scale-105 hover:shadow-lg"
+            )}
+            disabled={isLoading || !input.trim() || isChatDisabled()}
+            aria-label="Send message"
+          >
+            {isLoading ? (
+              <Loader2 size={20} className="animate-spin" />
+            ) : (
+              <Send size={20} />
+            )}
           </Button>
         </form>
+        <p className="text-xs text-center text-muted-foreground mt-2">
+          Press <kbd className="px-1.5 py-0.5 rounded bg-muted border text-[10px] font-mono">Enter</kbd> to send, <kbd className="px-1.5 py-0.5 rounded bg-muted border text-[10px] font-mono">Shift + Enter</kbd> for new line
+        </p>
       </div>
     </div>
   );
